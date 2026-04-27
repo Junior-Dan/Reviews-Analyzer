@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reviews Dashboard - Premium Insights</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --success: #10b981;
+      --danger: #ef4444;
+      --neutral: #6b7280;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      margin: 0;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .dashboard-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin: 0 0 24px 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dashboard-title span {
+      background: linear-gradient(135deg, var(--primary), #8b5cf6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Filters Section */
+    .header-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      align-items: end;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .filter-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    select,
+    input {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select:focus,
+    input:focus {
+      border-color: var(--primary);
+    }
+
+    .fetch-btn {
+      background-color: var(--success);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      height: 40px;
+      transition: opacity 0.2s;
+    }
+
+    .fetch-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* Top Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .trend {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .trend.up {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .trend.down {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .chart-box {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      min-height: 350px;
+    }
+
+    .chart-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .rating-box {
+      grid-column: span 4;
+    }
+
+    .sentiment-box {
+      grid-column: span 4;
+    }
+
+    .issue-box {
+      grid-column: span 4;
+    }
+
+    /* Table Container */
+    .table-container {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    td {
+      padding: 16px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .badge-positive {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-neutral {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .badge-negative {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-category {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .review-text {
+      max-width: 400px;
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+
+    .summary-text {
+      font-style: italic;
+      color: var(--text-muted);
+    }
+
+    .download-btn {
+      margin-top: 20px;
+      background-color: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .download-btn:hover {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+
+      .rating-box,
+      .sentiment-box,
+      .issue-box {
+        grid-column: span 12;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 class="dashboard-title">
+      <span>Reviews</span> Analyzer
+    </h1>
+    <!-- Header/Filters -->
+    <div class="header-section">
+      <div class="filter-group">
+        <label>Platform</label>
+        <select id="platform">
+          <option value="google">Google Play Store</option>
+          <option value="samsung">Samsung Galaxy Store</option>
+          <option value="apple">Apple App Store</option>
+       <!--   <option value="roku">Roku Channel Store</option> -->
+       <!-- <option value="amazon">Amazon Appstore</option> -->
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>App</label>
+        <select id="appIdSelect">
+          <option value="">Select App</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Manual App name or ID</label>
+        <input type="text" id="manualAppId" placeholder="com.package.name or ID">
+      </div>
+      <div class="filter-group">
+        <label>Rating filter</label>
+        <select id="ratingFilter">
+          <option value="all">All Stars</option>
+          <option value="1">1 Star</option>
+          <option value="2">2 Stars</option>
+          <option value="3">3 Stars</option>
+          <option value="4">4 Stars</option>
+          <option value="5">5 Stars</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <button class="fetch-btn" id="fetchBtn">Fetch Reviews</button>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Reviews & ratings</div>
+        <div class="stat-value" id="totalVal">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Average Rating<span class="trend up">Trend</span></div>
+        <div class="stat-value" id="avgVal">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Negative Sentiment</div>
+        <div class="stat-value" id="negVal" style="color: var(--danger)">-%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Issue</div>
+        <div class="stat-value" id="topIssueVal" style="font-size: 24px;">-</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-box rating-box">
+        <h3>Ratings Distribution</h3>
+        <canvas id="ratingChart"></canvas>
+      </div>
+      <div class="chart-box sentiment-box">
+        <h3>Sentiment</h3>
+        <canvas id="sentimentChart"></canvas>
+      </div>
+      <div class="chart-box issue-box">
+        <h3>Top Issues (Categories)</h3>
+        <canvas id="issueChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Recent Reviews Table -->
+    <div class="table-container">
+      <h3>Recent Reviews</h3>
+      <table id="reviewsTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>User/Author</th>
+            <th>Rating</th>
+            <th>Review</th>
+            <th>Sentiment</th>
+            <th>Category</th>
+            <th>AI Summary</th>
+          </tr>
+        </thead>
+        <tbody id="reviewsBody">
+          <!-- Rows injected here -->
+        </tbody>
+      </table>
+      <button class="download-btn" id="downloadCsvBtn">
+        <span>📥</span> Download CSV
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let ratingChart, sentimentChart, issueChart;
+    let currentReviews = [];
+    let packageNameMap = {};
+
+    // Initial Load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadApps('google');
+    });
+
+    // App Loading Logic
+    async function loadApps(platform) {
+      const appSelect = document.getElementById("appIdSelect");
+      appSelect.innerHTML = '<option value="">Select App</option>';
+      packageNameMap = {};
+
+      try {
+        const res = await fetch(`/packages`);
+        const data = await res.json();
+        if (data.packages) {
+          data.packages
+            .filter(pkg => (pkg.platform || 'google') === platform)
+            .sort((a, b) => a.appName.localeCompare(b.appName))
+            .forEach(pkg => {
+              const opt = document.createElement("option");
+              opt.value = pkg.packageName;
+              if (pkg.contentId) opt.setAttribute('data-content-id', pkg.contentId);
+              opt.textContent = pkg.appName;
+              appSelect.appendChild(opt);
+            });
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    document.getElementById("platform").addEventListener("change", (e) => loadApps(e.target.value));
+    document.getElementById("appIdSelect").addEventListener("change", () => document.getElementById("fetchBtn").click());
+
+    // Fetch Reviews & Update UI
+    document.getElementById("fetchBtn").addEventListener("click", async () => {
+      const platform = document.getElementById("platform").value;
+      let appId = document.getElementById("manualAppId").value || document.getElementById("appIdSelect").value;
+
+      if (!appId) return; // Do nothing if no app is selected
+
+      document.getElementById("fetchBtn").textContent = "Analyzing...";
+
+      try {
+        const select = document.getElementById("appIdSelect");
+        const selectedOpt = select.options[select.selectedIndex];
+        const contentId = selectedOpt ? selectedOpt.getAttribute('data-content-id') : null;
+
+        let url = `/reviews?platform=${platform}&appId=${encodeURIComponent(appId)}`;
+        if (contentId) url += `&contentId=${encodeURIComponent(contentId)}`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.reviews) {
+          currentReviews = data.reviews;
+          updateDashboard(data.stats, data.reviews);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        document.getElementById("fetchBtn").textContent = "Fetch Reviews";
+      }
+    });
+
+    document.getElementById("ratingFilter").addEventListener("change", () => {
+      if (currentReviews.length > 0) {
+        // Re-run dashboard update with current data but new filter
+        // We need to pass the "stats" object again, but actually we should re-calculate stats based on filtered data.
+        // It's better to refactor updateDashboard to accept raw reviews and do filtering inside.
+        applyFilterAndRender();
+      }
+    });
+
+
+
+    function applyFilterAndRender() {
+      const ratingVal = document.getElementById("ratingFilter").value;
+      let filtered = currentReviews;
+
+      if (ratingVal !== 'all') {
+        filtered = currentReviews.filter(r => Math.floor(r.rating) == parseInt(ratingVal));
+      }
+
+      
+
+      const localStats = calculateStats(filtered);
+
+      // If NOT filtering, use the global store data for the Chart (Important for apps with 0 text reviews)
+      if (document.getElementById("ratingFilter").value === 'all' && globalStats) {
+        localStats.ratingDist = globalStats.ratingDist;
+      }
+
+      renderDashboardWithStats(localStats, filtered);
+    }
+
+    let globalStoreTotal = 0;
+    let globalStats = null;  // Store the full stats from the store
+
+    function updateDashboard(stats, reviews) {
+      globalStoreTotal = stats.total;
+      globalStats = stats; // Save distribution
+      applyFilterAndRender();
+    }
+
+    function calculateStats(reviews) {
+      const s = {
+        total: reviews.length, // This is filtered total
+        avgRating: 0,
+        sentimentDist: { Positive: 0, Neutral: 0, Negative: 0 },
+        ratingDist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        categoryDist: { Performance: 0, Bugs: 0, UI: 0, Features: 0 }
+      };
+
+      let totalRating = 0;
+      reviews.forEach(r => {
+        totalRating += r.rating;
+        s.ratingDist[Math.floor(r.rating)] = (s.ratingDist[Math.floor(r.rating)] || 0) + 1;
+
+        if (r.aiAnalysis && r.aiAnalysis.sentiment) {
+          // Normalize case: "negative" -> "Negative"
+          let sent = r.aiAnalysis.sentiment;
+          sent = sent.charAt(0).toUpperCase() + sent.slice(1).toLowerCase();
+
+          if (s.sentimentDist.hasOwnProperty(sent)) {
+            s.sentimentDist[sent]++;
+          } else {
+            // If it's something weird, maybe map to Neutral?
+            // Or just ignore.
+          }
+
+          let cat = r.aiAnalysis.category;
+          if (cat === 'Other' || !s.categoryDist.hasOwnProperty(cat)) cat = 'Performance';
+          if (s.categoryDist.hasOwnProperty(cat)) s.categoryDist[cat]++;
+        }
+      });
+      s.avgRating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : 0;
+      return s;
+    }
+
+    function renderDashboardWithStats(stats, reviews) {
+      // Update Stat Cards
+      // SHOW GLOBAL TOTAL in the card, maybe with "(Filtered: N)" text if filtered?
+      // For now, let's just show the global Total as requested "Make the correct count from the store"
+      document.getElementById("totalVal").textContent = globalStoreTotal.toLocaleString();
+
+      // If filtered, maybe hint it?
+      const ratingVal = document.getElementById("ratingFilter").value;
+      if (ratingVal !== 'all') {
+        document.getElementById("totalVal").textContent += ` (${reviews.length})`;
+        document.getElementById("totalVal").style.fontSize = "20px";
+      } else {
+        document.getElementById("totalVal").style.fontSize = "32px";
+      }
+
+      document.getElementById("avgVal").textContent = `${stats.avgRating} / 5`;
+
+      const negPercent = Math.round((stats.sentimentDist.Negative / (reviews.length || 1)) * 100) || 0;
+      document.getElementById("negVal").textContent = `${negPercent}%`;
+
+      // Find top issue
+      const issues = stats.categoryDist;
+      let topIssue = "-";
+      let maxCount = -1;
+      for (let cat in issues) {
+        if (issues[cat] > maxCount) {
+          maxCount = issues[cat];
+          topIssue = cat;
+        }
+      }
+      document.getElementById("topIssueVal").textContent = topIssue;
+
+      // Update Charts
+      renderRatingChart(stats.ratingDist);
+      renderSentimentChart(stats.sentimentDist);
+      renderIssueChart(stats.categoryDist);
+
+      // Update Table
+      renderTable(reviews);
+    }
+
+    function renderRatingChart(dist) {
+      if (ratingChart) ratingChart.destroy();
+      const ctx = document.getElementById('ratingChart').getContext('2d');
+      ratingChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['1★', '2★', '3★', '4★', '5★'],
+          datasets: [{
+            data: [dist[1], dist[2], dist[3], dist[4], dist[5]],
+            backgroundColor: '#3b82f6',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, grid: { display: false } } }
+        }
+      });
+    }
+
+    function renderSentimentChart(dist) {
+      if (sentimentChart) sentimentChart.destroy();
+      const ctx = document.getElementById('sentimentChart').getContext('2d');
+      sentimentChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Positive', 'Neutral', 'Negative'],
+          datasets: [{
+            data: [dist.Positive, dist.Neutral, dist.Negative],
+            backgroundColor: ['#10b981', '#cbd5e1', '#ef4444'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          cutout: '60%',
+          maintainAspectRatio: true,
+          aspectRatio: 1.8,
+          layout: {
+            padding: {
+              top: 10,
+              bottom: 10,
+              left: 30,
+              right: 30
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                padding: 10,
+                font: { size: 11 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderIssueChart(dist) {
+      if (issueChart) issueChart.destroy();
+      const ctx = document.getElementById('issueChart').getContext('2d');
+      const filtered = Object.entries(dist).filter(([k]) => k !== 'Other').sort((a, b) => b[1] - a[1]);
+
+      issueChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: filtered.map(x => x[0]),
+          datasets: [{
+            data: filtered.map(x => x[1]),
+            backgroundColor: '#3b82f6',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: { display: false }
+            },
+            y: {
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function renderTable(reviews) {
+      const body = document.getElementById("reviewsBody");
+      body.innerHTML = "";
+
+      reviews.forEach(r => {
+        const row = document.createElement("tr");
+        const analysis = r.aiAnalysis || {};
+
+        row.innerHTML = `
+          <td>${new Date(r.createdAt).toLocaleDateString()}</td>
+          <td>${r.authorName}</td>
+          <td><b>${r.rating}★</b></td>
+          <td class="review-text">${r.text}</td>
+          <td><span class="badge badge-${(analysis.sentiment || 'neutral').toLowerCase()}">${analysis.sentiment || 'Pending'}</span></td>
+          <td><span class="badge badge-category">${(analysis.category === 'Other' ? 'Performance' : analysis.category) || 'Performance'}</span></td>
+          <td class="summary-text">${analysis.summary || '...'}</td>
+        `;
+        body.appendChild(row);
+      });
+    }
+
+    // CSV Download Logic
+    document.getElementById('downloadCsvBtn').addEventListener('click', () => {
+      if (currentReviews.length === 0) {
+        alert("No reviews to download. Fetch some reviews first!");
+        return;
+      }
+
+      // 1. Filter currentReviews based on UI filters (in case table is filtered by stars)
+      const ratingFilter = document.getElementById("ratingFilter").value;
+      const filtered = currentReviews.filter(r => {
+        if (ratingFilter === 'all') return true;
+        return Math.floor(r.rating) == parseInt(ratingFilter);
+      });
+
+      if (filtered.length === 0) {
+        alert("No reviews match the current star filter.");
+        return;
+      }
+
+      // 2. Prepare headers
+      const headers = ["Date", "Author", "Rating", "Review", "Sentiment", "Category", "AI Summary"];
+
+      // 3. Convert data to CSV format
+      const csvContent = [
+        headers.join(","),
+        ...filtered.map(r => {
+          const date = new Date(r.createdAt).toLocaleDateString();
+          const author = `"${(r.authorName || "Anonymous").replace(/"/g, '""')}"`;
+          const rating = r.rating;
+          const text = `"${(r.text || "").replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+          const sentiment = `"${(r.aiAnalysis?.sentiment || "N/A").replace(/"/g, '""')}"`;
+          const category = `"${(r.aiAnalysis?.category === 'Other' ? 'Performance' : r.aiAnalysis?.category || "N/A").replace(/"/g, '""')}"`;
+          const summary = `"${(r.aiAnalysis?.summary || "N/A").replace(/"/g, '""')}"`;
+
+          return [date, author, rating, text, sentiment, category, summary].join(",");
+        })
+      ].join("\n");
+
+      // 4. Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+
+      // Filename includes app name and date
+      const platform = document.getElementById("platform").value;
+      const appId = document.getElementById("appIdSelect").value || document.getElementById("manualAppId").value || "export";
+      link.setAttribute("download", `reviews_${platform}_${appId}_${new Date().toISOString().split('T')[0]}.csv`);
+
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+</body>
+
+</html>

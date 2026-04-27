@@ -1,0 +1,217 @@
+[
+    {
+        "packageName": "com.androtv.autoallstars",
+        "appName": "Auto All Stars",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.aquariumtv",
+        "appName": "Aquariums TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.eight.k",
+        "appName": "8K Landscapes",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.asapnetwork",
+        "appName": "ASAP Network",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.braziltimes",
+        "appName": "Brazil Times",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.bloomwellnesschannel",
+        "appName": "BLOOM Wellnes Channel",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.classicreruns",
+        "appName": "Classic Reruns TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.Bobthetrain",
+        "appName": "Bob the Train",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.Bobthetrainspanish",
+        "appName": "Bob el Train Espanol",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.cofeejazz",
+        "appName": "Coffe Jazz",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.tv.mars.relaxingnature",
+        "appName": "Relaxing Nature",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.channelfight",
+        "appName": "Channel Fight",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androrid.castify.coolschool",
+        "appName": "CoolSchool",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.cultureforwardtv",
+        "appName": "Culture Forward TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.entolivenetwork",
+        "appName": "Ento live Network",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.extremepoland",
+        "appName": "Extreme Polland",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.extreme",
+        "appName": "Extreme+",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.fvm",
+        "appName": "FVTV The Film Volt",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.getreelfirePlaces",
+        "appName": "GetReel FirePlaces",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.indimusictv",
+        "appName": "IndiMusiv TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.kidstv",
+        "appName": "Kids TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.kidsplanettv",
+        "appName": "Kids Planet TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.lifestylemagazines",
+        "appName": "LifeStyle Magazine",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.madeitmyselftv",
+        "appName": "Made It Myself TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.nautistylesluxuryyacht",
+        "appName": "NautiStyles Luxury Yacht",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.nollywoodcapitaltv",
+        "appName": "Nollywood Capital TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.ovwwrestlingtv",
+        "appName": "OVW WRESTLING",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.andromobile.realmusictv",
+        "appName": "RealMusic TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.tv.mars.relaxingnature",
+        "appName": "Relaxing Nature",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.repdattv",
+        "appName": "Rep Dat TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.scaretv",
+        "appName": "Scare TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.chicagoportagers",
+        "appName": "The Box Lacrosse Channel",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.thecrimechannel",
+        "appName": "The Stephen Gillen Crime Film",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.themanilatimes",
+        "appName": "The Manilla Times",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.Todazon",
+        "appName": "Todazon",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.trendwave",
+        "appName": "Trend Wave",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.turn",
+        "appName": "Turn",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.unreel",
+        "appName": "Unreel",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.wawkalaktv",
+        "appName": "Wawkalak TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.wearetottenhamtv",
+        "appName": "We are Tottenham TV",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.westerntvmovieclassics",
+        "appName": "Western TV & Movie Classics",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.westernflix",
+        "appName": "WesternFlix",
+        "platform": "google"
+    },
+    {
+        "packageName": "com.androtv.zafatv",
+        "appName": "Zafaa TV",
+        "platform": "google"
+    }
+]

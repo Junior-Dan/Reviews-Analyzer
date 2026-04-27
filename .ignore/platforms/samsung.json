@@ -1,0 +1,48 @@
+[
+    {
+        "packageName": "com.sec.android.app.sbrowser",
+        "appName": "Samsung Internet Browser",
+        "platform": "samsung",
+        "contentId": "000005006635"
+    },
+    {
+        "packageName": "com.samsung.android.messaging",
+        "appName": "Samsung Messages",
+        "platform": "samsung",
+        "contentId": "000008051095"
+    },
+    {
+        "packageName": "com.samsung.android.app.shealth",
+        "appName": "Samsung Health",
+        "platform": "samsung"
+    },
+    {
+        "packageName": "com.samsung.westernflix",
+        "appName": "WesternFlix",
+        "platform": "samsung"
+    },
+    {
+        "packageName": "com.samsung.android.oneconnect",
+        "appName": "SmartThings",
+        "platform": "samsung",
+        "contentId": "000004262296"
+    },
+    {
+        "packageName": "com.sec.android.gallery3d",
+        "appName": "Samsung Gallery",
+        "platform": "samsung",
+        "contentId": "000007985347"
+    },
+    {
+        "packageName": "com.sec.android.app.popupcalculator",
+        "appName": "UCL Tv",
+        "platform": "samsung",
+        "contentId": "000007507299"
+    },
+    {
+        "packageName": "com.samsung.android.sidegesturepad",
+        "appName": "Sidegesturepad",
+        "platform": "samsung",
+        "contentId": "000003036952"
+    }
+]
