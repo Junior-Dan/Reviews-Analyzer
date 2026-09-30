@@ -419,6 +419,11 @@
 
       try {
         const res = await fetch(`/packages`);
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+          console.warn("Packages API returned non-JSON response:", res.status);
+          return;
+        }
         const data = await res.json();
         if (data.packages) {
           data.packages
@@ -432,7 +437,7 @@
               appSelect.appendChild(opt);
             });
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Error loading apps:", e); }
     }
 
     document.getElementById("platform").addEventListener("change", (e) => loadApps(e.target.value));
@@ -456,6 +461,13 @@
         if (contentId) url += `&contentId=${encodeURIComponent(contentId)}`;
 
         const res = await fetch(url);
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+          const errText = await res.text();
+          console.error("Reviews API error:", res.status, errText);
+          alert(`API Error (${res.status}): Please verify platform credentials or app ID.`);
+          return;
+        }
         const data = await res.json();
 
         if (data.reviews) {
@@ -463,7 +475,7 @@
           updateDashboard(data.stats, data.reviews);
         }
       } catch (e) {
-        console.error(e);
+        console.error("Fetch reviews error:", e);
       } finally {
         document.getElementById("fetchBtn").textContent = "Fetch Reviews";
       }
