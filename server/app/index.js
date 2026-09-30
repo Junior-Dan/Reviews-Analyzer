@@ -3,6 +3,8 @@ const cors = require("cors");
 
 const reviewsRoute = require("../routes/reviews");
 const packagesRoute = require("../routes/packages");
+const authRoute = require("../routes/auth");
+const appsRoute = require("../routes/apps");
 
 const app = express();
 
@@ -18,8 +20,11 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Reviews API
+// API Routes
+app.use("/api/auth", authRoute);
+app.use("/apps", appsRoute);
 app.use("/reviews", reviewsRoute);
 app.use("/packages", packagesRoute);
 
 module.exports = app;
+
