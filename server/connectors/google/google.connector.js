@@ -3,13 +3,42 @@ const gplay = require("google-play-scraper").default || require("google-play-scr
 // Fetch reviews using google-play-scraper library
 async function fetchGoogleReviews(appId) {
   try {
-    const results = await gplay.reviews({
-      appId,
-      sort: gplay.sort?.NEWEST || 0,
-      num: 2000,
-      lang: 'en',
-      country: 'us'
-    });
+    let allResultsMap = new Map();
+    const sortMethod = gplay.sort.NEWEST;
+
+    let nextToken;
+    let countForThisSort = 0;
+    
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    do {
+      const result = await gplay.reviews({
+        appId,
+        sort: sortMethod,
+        num: 150,
+        paginate: true,
+        nextPaginationToken: nextToken
+      });
+      const reviews = result.data || [];
+      
+      let reachedOldReviews = false;
+      reviews.forEach(r => {
+        if (new Date(r.date) >= oneYearAgo) {
+          allResultsMap.set(r.id, r);
+        } else {
+          reachedOldReviews = true;
+        }
+      });
+      
+      countForThisSort += reviews.length;
+      nextToken = result.nextPaginationToken;
+      
+      // Break if no more or we've hit a reasonable limit per sort or reached older reviews
+      if (!nextToken || countForThisSort >= 5000 || reachedOldReviews) break; 
+    } while (true);
+
+    const allResults = Array.from(allResultsMap.values());
 
     let totalCount = 0;
     try {
@@ -19,19 +48,13 @@ async function fetchGoogleReviews(appId) {
       console.warn(`[Google] Could not fetch total ratings: ${e.message}`);
     }
 
-    const reviewsRaw = Array.isArray(results) ? results : (results.data || []);
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-    const reviews = reviewsRaw
-      .filter(r => new Date(r.date) >= oneYearAgo)
-      .map(r => ({
-        reviewId: r.id,
-        authorName: r.userName || "Anonymous",
-        rating: r.score,
-        text: r.text || "",
-        createdAt: new Date(r.date)
-      }));
+    const reviews = allResults.map(r => ({
+      reviewId: r.id,
+      authorName: r.userName || "Anonymous",
+      rating: r.score,
+      text: r.text || "",
+      createdAt: new Date(r.date)
+    }));
 
     return { reviews, totalCount };
   } catch (err) {

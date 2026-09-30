@@ -60,10 +60,11 @@ router.get("/", async (req, res) => {
     } else {
       return res.status(400).json({ message: `Platform '${platform}' not supported` });
     }
-    // Filter for last year (Google specific)
+
+    // Filter for last year (Google specific filtering is already handled in connector, but we do it for samsung too)
     const cutoffDate = new Date();
     cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
-    if (plat === "google" || plat === "samsung") {
+    if (plat === "samsung") {
       allReviews = allReviews.filter(r => new Date(r.createdAt) >= cutoffDate);
     }
 
@@ -75,26 +76,20 @@ router.get("/", async (req, res) => {
     const existingMap = new Map(existingReviews.map(r => [r.reviewId, r]));
 
     const processedReviews = [];
-    let newAnalysisCount = 0;
-    const MAX_NEW_ANALYSIS = 50; // Safety limit for Ollama
 
     for (const r of allReviews) {
       r.text = cleanReviewText(r.text);
       const existing = existingMap.get(r.reviewId);
 
-      if (existing?.aiAnalysis?.sentiment && existing.aiAnalysis.sentiment !== "Unknown") {
+      if (existing?.aiAnalysis?.sentiment && existing.aiAnalysis.sentiment !== "Unknown" && existing.aiAnalysis.sentiment !== "Pending") {
         r.aiAnalysis = existing.aiAnalysis;
-      } else if (newAnalysisCount < MAX_NEW_ANALYSIS) {
-        // Only analyze first N new reviews to avoid long timeouts
-        r.aiAnalysis = await ollamaService.analyzeReview(r.text);
-        newAnalysisCount++;
       } else {
-        r.aiAnalysis = { sentiment: "Pending", category: "Other", summary: "Queued for analysis" };
+        r.aiAnalysis = await ollamaService.analyzeReview(r.text);
       }
 
       processedReviews.push(r);
       
-      // Upsert to DB (don't await every one if it's too many, but for now it's okay)
+      // Upsert to DB
       await Review.findOneAndUpdate(
         { platform, appId, reviewId: r.reviewId },
         { $set: { ...r, platform, appId } },
@@ -119,7 +114,9 @@ router.get("/", async (req, res) => {
       }
 
       if (r.aiAnalysis) {
-        if (r.aiAnalysis.sentiment) stats.sentimentDist[r.aiAnalysis.sentiment]++;
+        if (r.aiAnalysis.sentiment && stats.sentimentDist.hasOwnProperty(r.aiAnalysis.sentiment)) {
+          stats.sentimentDist[r.aiAnalysis.sentiment]++;
+        }
         let cat = r.aiAnalysis.category;
         if (cat === 'Other' || !stats.categoryDist.hasOwnProperty(cat)) cat = 'Performance';
         if (stats.categoryDist.hasOwnProperty(cat)) stats.categoryDist[cat]++;

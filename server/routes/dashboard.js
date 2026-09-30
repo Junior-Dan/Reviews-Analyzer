@@ -17,11 +17,10 @@ router.get("/", async (req, res) => {
       });
     }
 
-    // Fetch only negative reviews (rating < 4) from MongoDB
+    // Fetch all reviews for this app from MongoDB
     const reviews = await Review.find({ 
       platform, 
-      appId, 
-      rating: { $lt: 4 } 
+      appId
     }).sort({ createdAt: -1 });
 
     res.json({

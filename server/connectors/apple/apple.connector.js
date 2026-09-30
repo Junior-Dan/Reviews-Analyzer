@@ -84,37 +84,71 @@ async function fetchAppleReviews(appId) {
             console.warn(`[Apple] app-store-scraper failed, falling back to JSON-LD: ${e.message}`);
         }
 
-        // 3. Scrape reviews from the HTML page (RSS is often empty)
-        const reviewsUrl = `https://apps.apple.com/us/app/id${appId}?see-all=reviews`;
-        let reviewsHtml = "";
+        // 3. Fetch reviews using app-store-scraper (paginating up to 10 pages for max 500 reviews)
         try {
-            const res = await axios.get(reviewsUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
-            reviewsHtml = res.data;
-            const $ = cheerio.load(reviewsHtml);
-
-            // The reviews are in containers with class svelte-1hjpbwc
-            $('.container.svelte-1hjpbwc').each((i, el) => {
-                const title = $(el).find('.title').text().trim();
-                const author = $(el).find('.author').text().trim();
-                const ratingText = $(el).find('.stars').attr('aria-label') || ""; // e.g. "5 Stars"
-                const rating = parseInt(ratingText) || 0;
-                const date = $(el).find('time').attr('datetime');
-                const content = $(el).find('.content p').text().trim();
-
-                if (content) {
-                    reviews.push({
-                        reviewId: `apple-${appId}-${i}-${date}`,
-                        authorName: author || "Anonymous",
-                        rating: rating,
-                        text: title ? `${title}\n${content}` : content,
-                        createdAt: date ? new Date(date) : new Date()
-                    });
-                }
-            });
+            console.log(`[Apple] Fetching reviews via app-store-scraper...`);
+            let page = 1;
+            let hasMore = true;
             
-            console.log(`[Apple] Scraped ${reviews.length} reviews from HTML`);
+            while (page <= 10 && hasMore) {
+                const pageReviews = await store.reviews({
+                    appId: appId,
+                    sort: store.sort.RECENT,
+                    page: page
+                });
+                
+                if (pageReviews && pageReviews.length > 0) {
+                    pageReviews.forEach(r => {
+                        reviews.push({
+                            reviewId: `apple-${appId}-${r.id}`,
+                            authorName: r.userName || "Anonymous",
+                            rating: r.score || 0,
+                            text: r.title ? `${r.title}\n${r.text}` : r.text,
+                            createdAt: r.updated ? new Date(r.updated) : new Date()
+                        });
+                    });
+                    page++;
+                } else {
+                    hasMore = false;
+                }
+            }
+            console.log(`[Apple] Scraped ${reviews.length} reviews from API`);
         } catch (e) {
-            console.error(`[Apple] Error scraping reviews HTML:`, e.message);
+            console.warn(`[Apple] app-store-scraper failed to get reviews: ${e.message}`);
+        }
+
+        // 3b. Fallback: Scrape reviews from the HTML page if API returned 0
+        let reviewsHtml = "";
+        if (reviews.length === 0) {
+            const reviewsUrl = `https://apps.apple.com/us/app/id${appId}?see-all=reviews`;
+            try {
+                const res = await axios.get(reviewsUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+                reviewsHtml = res.data;
+                const $ = cheerio.load(reviewsHtml);
+
+                $('.container.svelte-1hjpbwc').each((i, el) => {
+                    const title = $(el).find('.title').text().trim();
+                    const author = $(el).find('.author').text().trim();
+                    const ratingText = $(el).find('.stars').attr('aria-label') || "";
+                    const rating = parseInt(ratingText) || 0;
+                    const date = $(el).find('time').attr('datetime');
+                    const content = $(el).find('.content p').text().trim();
+
+                    if (content) {
+                        reviews.push({
+                            reviewId: `apple-${appId}-${i}-${date}`,
+                            authorName: author || "Anonymous",
+                            rating: rating,
+                            text: title ? `${title}\n${content}` : content,
+                            createdAt: date ? new Date(date) : new Date()
+                        });
+                    }
+                });
+                
+                console.log(`[Apple] Scraped ${reviews.length} reviews from HTML as fallback`);
+            } catch (e) {
+                console.error(`[Apple] Error scraping reviews HTML fallback:`, e.message);
+            }
         }
 
         // Fallback for stats if still zero

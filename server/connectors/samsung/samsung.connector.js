@@ -35,7 +35,7 @@ async function fetchSamsungReviews(appId) {
         const cleanDateStr = review.createDate.replace(/\.$/, "").replace(/\./g, "-");
         const date = new Date(cleanDateStr);
         
-        if (isNaN(date.getTime()) || date < oneYearAgo) {
+        if (isNaN(date.getTime())) {
           hasMore = false;
           break;
         }
