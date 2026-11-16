@@ -10,6 +10,14 @@ const fs = require("fs");
 router.get("/", (req, res) => {
     try {
         const platformsDir = path.join(__dirname, "../../.ignore/platforms");
+        const iconsCachePath = path.join(__dirname, "../../.ignore/appIcons.json");
+        let iconMap = {};
+        if (fs.existsSync(iconsCachePath)) {
+            try {
+                iconMap = JSON.parse(fs.readFileSync(iconsCachePath, "utf8"));
+            } catch (e) {}
+        }
+
         const allPackages = [];
 
         if (fs.existsSync(platformsDir)) {
@@ -20,7 +28,12 @@ router.get("/", (req, res) => {
                     const data = fs.readFileSync(filePath, "utf8");
                     const json = JSON.parse(data);
                     if (Array.isArray(json)) {
-                        allPackages.push(...json);
+                        json.forEach(pkg => {
+                            allPackages.push({
+                                ...pkg,
+                                iconUrl: pkg.iconUrl || iconMap[pkg.packageName] || null
+                            });
+                        });
                     }
                 }
             });

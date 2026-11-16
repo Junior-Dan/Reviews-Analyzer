@@ -1,0 +1,899 @@
+
+    body[data-page="integrations"] {
+      --sidebar-bg: #17533b;
+      --sidebar-hover: #1c6145;
+      --app-bg: #eef2ef;
+      --card-bg: #ffffff;
+      --card-inner: #f7f9f7;
+      --text-dark: #1e293b;
+      --text-muted: #64748b;
+      --primary-green: #17533b;
+      --accent-mint: #4ea67e;
+      --accent-mint-light: #a2d2be;
+      --badge-up-bg: #dcfce7;
+      --badge-up-text: #15803d;
+      --border-soft: #e2e8f0;
+      --radius-app: 28px;
+      --radius-card: 20px;
+      --radius-pill: 9999px;
+    }
+
+    body[data-page="integrations"] * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    }
+
+    body[data-page="integrations"], body[data-page="integrations"] {
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--sidebar-bg);
+      color: var(--text-dark);
+    }
+
+    body[data-page="integrations"] {
+      display: flex;
+    }
+
+    /* ============================================================
+       SIDEBAR
+       ============================================================ */
+    body[data-page="integrations"] .sidebar {
+      width: 220px;
+      min-width: 220px;
+      background-color: var(--sidebar-bg);
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #ffffff;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+
+    body[data-page="integrations"] .brand-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      cursor: pointer;
+    }
+
+    body[data-page="integrations"] .brand-logo-icon {
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    body[data-page="integrations"] .brand-name {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #ffffff;
+    }
+
+    body[data-page="integrations"] .sidebar-top {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    body[data-page="integrations"] .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    body[data-page="integrations"] .nav-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    body[data-page="integrations"] .nav-item.nav-bottom-group-start {
+      margin-top: auto;
+    }
+
+    body[data-page="integrations"] .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8.5px 14px;
+      border-radius: 12px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    body[data-page="integrations"] .nav-item:hover {
+      background-color: var(--sidebar-hover);
+      color: #ffffff;
+    }
+
+    body[data-page="integrations"] .nav-item.active {
+      color: #ffffff;
+      font-weight: 600;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    body[data-page="integrations"] .nav-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    body[data-page="integrations"] .nav-item svg {
+      width: 17px;
+      height: 17px;
+      stroke-width: 2;
+    }
+
+    body[data-page="integrations"] .nav-submenu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin: 6px 0 8px 22px;
+      padding: 2px 0 2px 12px;
+      border-left: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    body[data-page="integrations"] .nav-subitem {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7.5px 10px;
+      border-radius: 9px;
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    body[data-page="integrations"] .nav-subitem svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2;
+      flex-shrink: 0;
+    }
+
+    body[data-page="integrations"] .nav-subitem:hover {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ============================================================
+       MAIN CANVAS CONTAINER
+       ============================================================ */
+    body[data-page="integrations"] .main-wrapper {
+      flex: 1;
+      padding: 12px 14px 12px 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body[data-page="integrations"] .canvas-container {
+      background-color: var(--app-bg);
+      border-radius: var(--radius-app);
+      height: 100%;
+      padding: 20px 24px 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    body[data-page="integrations"] .page-scroll-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-right: -20px;
+      padding-right: 20px;
+      padding-bottom: 20px;
+    }
+
+    body[data-page="integrations"] .page-scroll-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    body[data-page="integrations"] .page-scroll-body::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+
+    /* TOP BAR */
+    body[data-page="integrations"] .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    body[data-page="integrations"] .search-pill {
+      display: flex;
+      align-items: center;
+      background-color: #ffffff;
+      border-radius: 9999px;
+      padding: 10px 18px;
+      width: 340px;
+      max-width: 100%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      gap: 10px;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+    }
+
+    body[data-page="integrations"] .search-pill:focus-within {
+      width: 420px;
+      box-shadow: 0 0 0 2px rgba(23, 83, 59, 0.2);
+    }
+
+    body[data-page="integrations"] .search-pill input {
+      border: none;
+      outline: none;
+      font-size: 13px;
+      width: 100%;
+      color: var(--text-dark);
+      background: transparent;
+    }
+
+    body[data-page="integrations"] .search-pill input::placeholder {
+      color: #94a3b8;
+    }
+
+    body[data-page="integrations"] .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    body[data-page="integrations"] .btn-action-outline {
+      border: 1.5px solid var(--primary-green);
+      background-color: transparent;
+      color: var(--primary-green);
+      padding: 7px 16px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    body[data-page="integrations"] .btn-action-outline:hover {
+      background-color: var(--primary-green);
+      color: #ffffff;
+      border-style: solid;
+    }
+
+    body[data-page="integrations"] .btn-action-solid {
+      background-color: var(--primary-green);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+
+    body[data-page="integrations"] .btn-action-solid:hover {
+      opacity: 0.92;
+    }
+
+    body[data-page="integrations"] .icon-btn {
+      width: 36px;
+      height: 36px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      color: var(--primary-green);
+      transition: background-color 0.2s;
+    }
+
+    body[data-page="integrations"] .icon-btn:hover {
+      background-color: #f8fafc;
+    }
+
+    body[data-page="integrations"] .alert-badge-dot {
+      position: absolute;
+      top: 6px;
+      right: 7px;
+      width: 7px;
+      height: 7px;
+      background-color: #ef4444;
+      border-radius: 50%;
+      border: 1.5px solid #ffffff;
+    }
+
+    body[data-page="integrations"] .avatar-circle {
+      width: 36px;
+      height: 36px;
+      background-color: var(--primary-green);
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(23, 83, 59, 0.25);
+    }
+
+    /* ============================================================
+       FILTER & VIEW TOOLBAR
+       ============================================================ */
+    body[data-page="integrations"] .catalog-toolbar {
+      background: transparent;
+      padding: 0 2px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    body[data-page="integrations"] .store-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    body[data-page="integrations"] .store-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 13px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    body[data-page="integrations"] .store-tab:hover {
+      background: #f8fafc;
+      color: var(--text-dark);
+    }
+
+    body[data-page="integrations"] .store-tab.active {
+      background: #eef2ef;
+      color: var(--primary-green);
+      border-color: #cbd5ce;
+      font-weight: 700;
+    }
+
+    body[data-page="integrations"] .store-tab-count {
+      background: rgba(15, 23, 42, 0.07);
+      color: inherit;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+    }
+
+    body[data-page="integrations"] .store-tab.active .store-tab-count {
+      background: var(--primary-green);
+      color: #ffffff;
+    }
+
+    body[data-page="integrations"] .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    body[data-page="integrations"] .filter-chip-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    body[data-page="integrations"] .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 11px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    body[data-page="integrations"] .filter-chip:hover {
+      border-color: #cbd5e1;
+      background-color: #f8fafc;
+    }
+
+    body[data-page="integrations"] .filter-chip.active-filter, body[data-page="integrations"] .filter-chip-wrapper.open .filter-chip {
+      border-color: var(--primary-green);
+      background-color: #f7f9f7;
+      color: var(--primary-green);
+    }
+
+    body[data-page="integrations"] .filter-chip .chip-icon {
+      width: 15px;
+      height: 15px;
+      color: #475569;
+      flex-shrink: 0;
+    }
+
+    body[data-page="integrations"] .filter-chip.active-filter .chip-icon, body[data-page="integrations"] .filter-chip-wrapper.open .filter-chip .chip-icon {
+      color: var(--primary-green);
+    }
+
+    body[data-page="integrations"] .filter-chip .chip-chevron {
+      width: 13px;
+      height: 13px;
+      color: #64748b;
+      margin-left: 2px;
+      flex-shrink: 0;
+      transition: transform 0.15s ease;
+    }
+
+    body[data-page="integrations"] .filter-chip-wrapper.open .filter-chip .chip-chevron {
+      transform: rotate(180deg);
+      color: var(--primary-green);
+    }
+
+    body[data-page="integrations"] .filter-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 195px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+      padding: 6px;
+      z-index: 150;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    body[data-page="integrations"] .filter-chip-wrapper.open .filter-dropdown-menu {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    body[data-page="integrations"] .filter-menu-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #334155;
+      cursor: pointer;
+      transition: background-color 0.12s;
+    }
+
+    body[data-page="integrations"] .filter-menu-option:hover {
+      background-color: #f1f5f9;
+    }
+
+    body[data-page="integrations"] .filter-menu-option.selected {
+      background-color: #eef2ef;
+      color: var(--primary-green);
+      font-weight: 700;
+    }
+
+    /* INTEGRATIONS MAIN CARD & 3-COLUMN CARD GRID */
+    body[data-page="integrations"] .apps-table-card {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+      flex: 1;
+    }
+
+    body[data-page="integrations"] .integrations-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    body[data-page="integrations"] .integrations-page-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-dark);
+      letter-spacing: -0.02em;
+    }
+
+    body[data-page="integrations"] .integrations-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    @media (max-width: 1180px) {
+
+      body[data-page="integrations"] .integrations-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    
+}
+
+    @media (max-width: 760px) {
+
+      body[data-page="integrations"] .integrations-grid {
+        grid-template-columns: 1fr;
+      }
+    
+}
+
+    body[data-page="integrations"] .int-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    body[data-page="integrations"] .int-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    body[data-page="integrations"] .int-card-body {
+      padding: 22px 22px 20px 22px;
+    }
+
+    body[data-page="integrations"] .int-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    body[data-page="integrations"] .int-logo-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #eef2f6;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    body[data-page="integrations"] .int-more-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    body[data-page="integrations"] .int-more-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    body[data-page="integrations"] .int-more-btn:hover {
+      background-color: #f1f5f9;
+      color: var(--text-dark);
+    }
+
+    body[data-page="integrations"] .int-more-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      min-width: 145px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.1);
+      padding: 5px;
+      z-index: 80;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    body[data-page="integrations"] .int-more-wrap.open .int-more-menu {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    body[data-page="integrations"] .int-more-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: background-color 0.12s;
+    }
+
+    body[data-page="integrations"] .int-more-item:hover {
+      background-color: #f1f5f9;
+    }
+
+    body[data-page="integrations"] .int-more-item.danger {
+      color: #dc2626;
+    }
+
+    body[data-page="integrations"] .int-more-item.danger:hover {
+      background-color: #fef2f2;
+    }
+
+    body[data-page="integrations"] .int-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    body[data-page="integrations"] .int-card-desc {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 40px;
+    }
+
+    body[data-page="integrations"] .int-card-footer {
+      padding: 14px 22px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    body[data-page="integrations"] .int-footer-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    body[data-page="integrations"] .btn-int-gear {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+    }
+
+    body[data-page="integrations"] .btn-int-gear:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: var(--text-dark);
+    }
+
+    body[data-page="integrations"] .btn-int-details {
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 9px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #334155;
+      font-size: 12.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+    }
+
+    body[data-page="integrations"] .btn-int-details:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: var(--text-dark);
+    }
+
+    /* TOGGLE SWITCH */
+    body[data-page="integrations"] .conn-switch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body[data-page="integrations"] .conn-switch-track {
+      width: 40px;
+      height: 22px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      position: relative;
+      transition: background 0.2s ease;
+    }
+
+    body[data-page="integrations"] .conn-switch.connected .conn-switch-track {
+      background: var(--primary-green);
+    }
+
+    body[data-page="integrations"] .conn-switch-thumb {
+      width: 18px;
+      height: 18px;
+      background: #ffffff;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    }
+
+    body[data-page="integrations"] .conn-switch.connected .conn-switch-thumb {
+      transform: translateX(18px);
+    }
+
+    body[data-page="integrations"] .loader-cell-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 64px 0;
+    }
+
+    body[data-page="integrations"] .circular-spinner {
+      width: 34px;
+      height: 34px;
+      border: 3px solid #e2e8f0;
+      border-top-color: var(--primary-green);
+      border-radius: 50%;
+      animation: reviewSpin 0.75s linear infinite;
+    }
+
+    @keyframes reviewSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* MODALS & TOAST */
+    body[data-page="integrations"] .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.45);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    body[data-page="integrations"] .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    body[data-page="integrations"] .modal-card {
+      background: #ffffff;
+      width: 460px;
+      max-width: 92vw;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    }
+
+    body[data-page="integrations"] .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    body[data-page="integrations"] .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    body[data-page="integrations"] .modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    body[data-page="integrations"] .toast-message {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: var(--primary-green);
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    body[data-page="integrations"] .toast-message.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  

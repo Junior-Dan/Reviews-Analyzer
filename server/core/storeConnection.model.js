@@ -5,12 +5,13 @@ const storeConnectionSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
+      index: true
     },
     platform: {
       type: String,
       required: true,
-      enum: ["google", "apple", "samsung", "amazon"]
+      enum: ["google", "apple", "samsung", "amazon", "roku"]
     },
     connectionName: {
       type: String,
@@ -28,5 +29,7 @@ const storeConnectionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+storeConnectionSchema.index({ user: 1, platform: 1 }, { unique: true });
 
 module.exports = mongoose.model("StoreConnection", storeConnectionSchema);

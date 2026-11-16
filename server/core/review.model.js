@@ -12,9 +12,18 @@ const reviewSchema = new mongoose.Schema({
     sentiment: String,
     category: String,
     summary: String
+  },
+  reply: {
+    text: String,
+    status: { type: String, default: "Pending" },
+    approvedAt: Date,
+    approvedBy: String,
+    publishedAt: Date,
+    publishError: String
   }
 }, { timestamps: true });
 
 const Review = mongoose.model("Review", reviewSchema);
 
 module.exports = Review;
+

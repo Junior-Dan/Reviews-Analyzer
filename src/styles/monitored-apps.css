@@ -1,0 +1,1734 @@
+
+    body[data-page="monitored-apps"] {
+      --sidebar-bg: #17533b;
+      --sidebar-hover: #1c6145;
+      --app-bg: #eef2ef;
+      --card-bg: #ffffff;
+      --card-inner: #f7f9f7;
+      --text-dark: #1e293b;
+      --text-muted: #64748b;
+      --primary-green: #17533b;
+      --accent-mint: #4ea67e;
+      --accent-mint-light: #a2d2be;
+      --badge-up-bg: #dcfce7;
+      --badge-up-text: #15803d;
+      --border-soft: #e2e8f0;
+      --radius-app: 28px;
+      --radius-card: 20px;
+    }
+
+    body[data-page="monitored-apps"] * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    }
+
+    body[data-page="monitored-apps"], body[data-page="monitored-apps"] {
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--sidebar-bg);
+      color: var(--text-dark);
+    }
+
+    body[data-page="monitored-apps"] {
+      display: flex;
+    }
+
+    /* ============================================================
+       SIDEBAR
+       ============================================================ */
+    body[data-page="monitored-apps"] .sidebar {
+      width: 220px;
+      min-width: 220px;
+      background-color: var(--sidebar-bg);
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #ffffff;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+
+    body[data-page="monitored-apps"] .brand-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      cursor: pointer;
+    }
+
+    body[data-page="monitored-apps"] .brand-logo-icon {
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .brand-name {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #ffffff;
+    }
+
+    body[data-page="monitored-apps"] .sidebar-top {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    body[data-page="monitored-apps"] .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    body[data-page="monitored-apps"] .nav-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    body[data-page="monitored-apps"] .nav-item.nav-bottom-group-start {
+      margin-top: auto;
+    }
+
+    body[data-page="monitored-apps"] .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8.5px 14px;
+      border-radius: 12px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    body[data-page="monitored-apps"] .nav-item:hover {
+      background-color: var(--sidebar-hover);
+      color: #ffffff;
+    }
+
+    body[data-page="monitored-apps"] .nav-item.active {
+      color: #ffffff;
+      font-weight: 600;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    body[data-page="monitored-apps"] .nav-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    body[data-page="monitored-apps"] .nav-item svg {
+      width: 17px;
+      height: 17px;
+      stroke-width: 2;
+    }
+
+    body[data-page="monitored-apps"] .nav-submenu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin: 6px 0 8px 22px;
+      padding: 2px 0 2px 12px;
+      border-left: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    body[data-page="monitored-apps"] .nav-subitem {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7.5px 10px;
+      border-radius: 9px;
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .nav-subitem svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .nav-subitem:hover {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    body[data-page="monitored-apps"] .nav-subitem.active {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.14);
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       MAIN CANVAS CONTAINER
+       ============================================================ */
+    body[data-page="monitored-apps"] .main-wrapper {
+      flex: 1;
+      padding: 12px 14px 12px 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body[data-page="monitored-apps"] .canvas-container {
+      background-color: var(--app-bg);
+      border-radius: var(--radius-app);
+      height: 100%;
+      padding: 20px 24px 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    body[data-page="monitored-apps"] .page-scroll-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-right: -20px;
+      padding-right: 20px;
+      padding-bottom: 20px;
+    }
+
+    body[data-page="monitored-apps"] .page-scroll-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    body[data-page="monitored-apps"] .page-scroll-body::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+
+    /* TOP BAR */
+    body[data-page="monitored-apps"] .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .search-pill {
+      display: flex;
+      align-items: center;
+      background-color: #ffffff;
+      border-radius: 9999px;
+      padding: 10px 18px;
+      width: 340px;
+      max-width: 100%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      gap: 10px;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+    }
+
+    body[data-page="monitored-apps"] .search-pill:focus-within {
+      width: 420px;
+      box-shadow: 0 0 0 2px rgba(23, 83, 59, 0.2);
+    }
+
+    body[data-page="monitored-apps"] .search-pill input {
+      border: none;
+      outline: none;
+      font-size: 13px;
+      width: 100%;
+      color: var(--text-dark);
+      background: transparent;
+    }
+
+    body[data-page="monitored-apps"] .search-pill input::placeholder {
+      color: #94a3b8;
+    }
+
+    body[data-page="monitored-apps"] .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    body[data-page="monitored-apps"] .btn-action-outline {
+      border: 1.5px solid var(--primary-green);
+      background-color: transparent;
+      color: var(--primary-green);
+      padding: 7px 16px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    body[data-page="monitored-apps"] .btn-action-outline:hover {
+      background-color: var(--primary-green);
+      color: #ffffff;
+      border-style: solid;
+    }
+
+    body[data-page="monitored-apps"] .btn-action-solid {
+      background-color: var(--primary-green);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+
+    body[data-page="monitored-apps"] .btn-action-solid:hover {
+      opacity: 0.92;
+    }
+
+    body[data-page="monitored-apps"] .icon-btn {
+      width: 36px;
+      height: 36px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      color: var(--primary-green);
+      transition: background-color 0.2s;
+    }
+
+    body[data-page="monitored-apps"] .icon-btn:hover {
+      background-color: #f8fafc;
+    }
+
+    body[data-page="monitored-apps"] .alert-badge-dot {
+      position: absolute;
+      top: 6px;
+      right: 7px;
+      width: 7px;
+      height: 7px;
+      background-color: #ef4444;
+      border-radius: 50%;
+      border: 1.5px solid #ffffff;
+    }
+
+    body[data-page="monitored-apps"] .avatar-circle {
+      width: 36px;
+      height: 36px;
+      background-color: var(--primary-green);
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(23, 83, 59, 0.25);
+    }
+
+    /* ============================================================
+       PAGE HEADER & KPI SUMMARY STRIP
+       ============================================================ */
+    body[data-page="monitored-apps"] .page-header-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    body[data-page="monitored-apps"] .page-title-group h1 {
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--text-dark);
+    }
+
+    body[data-page="monitored-apps"] .page-title-group p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    body[data-page="monitored-apps"] .sync-all-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid var(--border-soft);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dark);
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    body[data-page="monitored-apps"] .sync-all-pill:hover {
+      border-color: var(--primary-green);
+      color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .live-pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #16a34a;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+    }
+
+    body[data-page="monitored-apps"] .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    body[data-page="monitored-apps"] .kpi-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.025);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+      border: 1px solid rgba(226, 232, 240, 0.6);
+    }
+
+    body[data-page="monitored-apps"] .kpi-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    body[data-page="monitored-apps"] .kpi-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    body[data-page="monitored-apps"] .kpi-icon-box {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: #f0fdf4;
+      color: var(--primary-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    body[data-page="monitored-apps"] .kpi-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-dark);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    body[data-page="monitored-apps"] .kpi-sub {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    body[data-page="monitored-apps"] .kpi-badge-up {
+      background: #dcfce7;
+      color: #15803d;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 10.5px;
+    }
+
+    /* ============================================================
+       FILTER & VIEW TOOLBAR
+       ============================================================ */
+    body[data-page="monitored-apps"] .catalog-toolbar {
+      background: transparent;
+      padding: 0 2px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    body[data-page="monitored-apps"] .store-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    body[data-page="monitored-apps"] .store-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 13px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .store-tab:hover {
+      background: #f8fafc;
+      color: var(--text-dark);
+    }
+
+    body[data-page="monitored-apps"] .store-tab.active {
+      background: #eef2ef;
+      color: var(--primary-green);
+      border-color: #cbd5ce;
+      font-weight: 700;
+    }
+
+    body[data-page="monitored-apps"] .store-tab-count {
+      background: rgba(15, 23, 42, 0.07);
+      color: inherit;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+    }
+
+    body[data-page="monitored-apps"] .store-tab.active .store-tab-count {
+      background: var(--primary-green);
+      color: #ffffff;
+    }
+
+    body[data-page="monitored-apps"] .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    body[data-page="monitored-apps"] .filter-chip-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    body[data-page="monitored-apps"] .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 11px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    body[data-page="monitored-apps"] .filter-chip:hover {
+      border-color: #cbd5e1;
+      background-color: #f8fafc;
+    }
+
+    body[data-page="monitored-apps"] .filter-chip.active-filter, body[data-page="monitored-apps"] .filter-chip-wrapper.open .filter-chip {
+      border-color: var(--primary-green);
+      background-color: #f7f9f7;
+      color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .filter-chip .chip-icon {
+      width: 15px;
+      height: 15px;
+      color: #475569;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .filter-chip.active-filter .chip-icon, body[data-page="monitored-apps"] .filter-chip-wrapper.open .filter-chip .chip-icon {
+      color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .filter-chip .chip-chevron {
+      width: 13px;
+      height: 13px;
+      color: #64748b;
+      margin-left: 2px;
+      flex-shrink: 0;
+      transition: transform 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .filter-chip-wrapper.open .filter-chip .chip-chevron {
+      transform: rotate(180deg);
+      color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .filter-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 195px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+      padding: 6px;
+      z-index: 150;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .filter-chip-wrapper.open .filter-dropdown-menu {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    body[data-page="monitored-apps"] .filter-menu-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #334155;
+      cursor: pointer;
+      transition: background-color 0.12s;
+    }
+
+    body[data-page="monitored-apps"] .filter-menu-option:hover {
+      background-color: #f1f5f9;
+    }
+
+    body[data-page="monitored-apps"] .filter-menu-option.selected {
+      background-color: #eef2ef;
+      color: var(--primary-green);
+      font-weight: 700;
+    }
+
+    body[data-page="monitored-apps"] .view-toggle-group {
+      display: inline-flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 10px;
+      gap: 2px;
+    }
+
+    body[data-page="monitored-apps"] .view-toggle-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 5px 9px;
+      border-radius: 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    body[data-page="monitored-apps"] .view-toggle-btn.active {
+      background: #ffffff;
+      color: var(--primary-green);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    /* ============================================================
+       MONITORED APPS GRID CARDS
+       ============================================================ */
+    body[data-page="monitored-apps"] .apps-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 16px;
+    }
+
+    body[data-page="monitored-apps"] .app-card {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 18px 20px;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    body[data-page="monitored-apps"] .app-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      border-color: #cbd5ce;
+    }
+
+    body[data-page="monitored-apps"] .app-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    body[data-page="monitored-apps"] .app-identity {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      min-width: 0;
+    }
+
+    body[data-page="monitored-apps"] .app-icon-tile {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 17px;
+      color: #ffffff;
+      flex-shrink: 0;
+      position: relative;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+      background: #f1f5f9;
+    }
+
+    body[data-page="monitored-apps"] .app-icon-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 14px;
+      display: block;
+    }
+
+    body[data-page="monitored-apps"] .app-store-mini-badge {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    body[data-page="monitored-apps"] .app-store-mini-badge svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    body[data-page="monitored-apps"] .app-title-meta {
+      min-width: 0;
+    }
+
+    body[data-page="monitored-apps"] .app-title-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    body[data-page="monitored-apps"] .app-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-dark);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    body[data-page="monitored-apps"] .pkg-copy-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 2px 7px;
+      margin-top: 4px;
+      cursor: pointer;
+      max-width: 210px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.15s;
+    }
+
+    body[data-page="monitored-apps"] .pkg-copy-chip:hover {
+      border-color: var(--primary-green);
+      color: var(--primary-green);
+      background: #f0fdf4;
+    }
+
+    body[data-page="monitored-apps"] .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #166534;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .status-pill.paused {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    body[data-page="monitored-apps"] .status-pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* APP METRICS STRIP */
+    body[data-page="monitored-apps"] .app-metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: #f8fafc;
+      border: 1px solid #eef2f6;
+      border-radius: 13px;
+      padding: 10px 12px;
+    }
+
+    body[data-page="monitored-apps"] .app-metric-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    body[data-page="monitored-apps"] .app-metric-col + .app-metric-col {
+      border-left: 1px solid #e2e8f0;
+      padding-left: 10px;
+    }
+
+    body[data-page="monitored-apps"] .app-metric-val {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    body[data-page="monitored-apps"] .app-metric-lbl {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* SENTIMENT BAR */
+    body[data-page="monitored-apps"] .sentiment-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    body[data-page="monitored-apps"] .sentiment-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    body[data-page="monitored-apps"] .sentiment-bar-track {
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      overflow: hidden;
+      display: flex;
+    }
+
+    body[data-page="monitored-apps"] .sent-pos {
+      background: #16a34a;
+      height: 100%;
+    }
+
+    body[data-page="monitored-apps"] .sent-neu {
+      background: #f59e0b;
+      height: 100%;
+    }
+
+    body[data-page="monitored-apps"] .sent-neg {
+      background: #ef4444;
+      height: 100%;
+    }
+
+    /* CARD FOOTER ACTIONS */
+    body[data-page="monitored-apps"] .app-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid #f1f5f9;
+      gap: 8px;
+    }
+
+    body[data-page="monitored-apps"] .sync-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    body[data-page="monitored-apps"] .card-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    body[data-page="monitored-apps"] .btn-card-sm {
+      padding: 6px 11px;
+      border-radius: 9px;
+      font-size: 11.5px;
+      font-weight: 700;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: var(--text-dark);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+
+    body[data-page="monitored-apps"] .btn-card-sm:hover {
+      border-color: var(--primary-green);
+      color: var(--primary-green);
+      background: #f0fdf4;
+    }
+
+    body[data-page="monitored-apps"] .btn-card-primary {
+      background: var(--primary-green);
+      color: #ffffff;
+      border-color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .btn-card-primary:hover {
+      background: #12402d;
+      color: #ffffff;
+    }
+
+    body[data-page="monitored-apps"] .btn-card-danger:hover {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    body[data-page="monitored-apps"] .action-sq-group {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    body[data-page="monitored-apps"] .btn-action-sq {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #7c8b9e;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .btn-action-sq:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: var(--text-dark);
+    }
+
+    body[data-page="monitored-apps"] .btn-action-sq.danger:hover {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    /* COMPACT TABLE VIEW */
+    body[data-page="monitored-apps"] .apps-table-card {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+      flex: 1;
+    }
+
+    body[data-page="monitored-apps"] table.apps-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    body[data-page="monitored-apps"] table.apps-table th {
+      padding: 12px 18px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    body[data-page="monitored-apps"] table.apps-table td {
+      padding: 13px 18px;
+      border-bottom: 1px solid #f8fafc;
+      vertical-align: middle;
+    }
+
+    body[data-page="monitored-apps"] table.apps-table td.loader-td {
+      border-bottom: none;
+    }
+
+    body[data-page="monitored-apps"] table.apps-table tr:hover td {
+      background: #f8fafc;
+    }
+
+    body[data-page="monitored-apps"] .app-row-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 17px;
+      height: 17px;
+      border: 1.5px solid #1e293b;
+      border-radius: 5px;
+      background-color: #ffffff;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: inline-grid;
+      place-content: center;
+      margin: 0;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .app-row-checkbox:checked {
+      background-color: var(--primary-green);
+      border-color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .app-row-checkbox:checked::before {
+      content: "";
+      width: 9px;
+      height: 5px;
+      border-left: 2px solid #ffffff;
+      border-bottom: 2px solid #ffffff;
+      transform: rotate(-45deg) translate(1px, -1px);
+    }
+
+    /* PAGINATION & LOADER (MATCHING MESSAGES PAGE) */
+    body[data-page="monitored-apps"] .pagination-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 4px 16px 4px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border-soft);
+      font-size: 12.5px;
+      color: #94a3b8;
+      gap: 16px;
+    }
+
+    body[data-page="monitored-apps"] .pagination-info {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    body[data-page="monitored-apps"] .pagination-pages {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    body[data-page="monitored-apps"] .page-nav-btn {
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.15s, background-color 0.15s;
+    }
+
+    body[data-page="monitored-apps"] .page-nav-btn:hover:not(:disabled) {
+      color: var(--text-dark);
+      background-color: #f1f5f9;
+    }
+
+    body[data-page="monitored-apps"] .page-nav-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    body[data-page="monitored-apps"] .page-num-btn {
+      background: none;
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: color 0.15s;
+    }
+
+    body[data-page="monitored-apps"] .page-num-btn:hover {
+      color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .page-num-btn.active {
+      color: #2563eb;
+      font-weight: 800;
+    }
+
+    body[data-page="monitored-apps"] .pagination-per-page {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #94a3b8;
+    }
+
+    body[data-page="monitored-apps"] .per-page-select-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    body[data-page="monitored-apps"] .per-page-custom-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 5px 11px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    body[data-page="monitored-apps"] .per-page-custom-btn:hover {
+      border-color: #cbd5e1;
+      background-color: #f8fafc;
+    }
+
+    body[data-page="monitored-apps"] .per-page-select-wrap.open .per-page-custom-btn {
+      border-color: var(--primary-green);
+      background-color: #f7f9f7;
+      color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .per-page-chevron {
+      width: 12px;
+      height: 12px;
+      color: #475569;
+      transition: transform 0.2s ease;
+    }
+
+    body[data-page="monitored-apps"] .per-page-select-wrap.open .per-page-chevron {
+      transform: rotate(180deg);
+      color: var(--primary-green);
+    }
+
+    body[data-page="monitored-apps"] .per-page-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 78px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.1);
+      padding: 5px;
+      z-index: 60;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .per-page-dropdown-menu.drop-up {
+      top: auto;
+      bottom: calc(100% + 6px);
+      transform: translateY(4px);
+    }
+
+    body[data-page="monitored-apps"] .per-page-select-wrap.open .per-page-dropdown-menu {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    body[data-page="monitored-apps"] .per-page-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: background-color 0.12s;
+    }
+
+    body[data-page="monitored-apps"] .per-page-option:hover {
+      background-color: #f1f5f9;
+    }
+
+    body[data-page="monitored-apps"] .per-page-option.selected {
+      background-color: #eef2ef;
+      color: var(--primary-green);
+      font-weight: 700;
+    }
+
+    body[data-page="monitored-apps"] .loader-cell-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 36px 0;
+    }
+
+    body[data-page="monitored-apps"] .circular-spinner {
+      width: 34px;
+      height: 34px;
+      border: 3px solid #e2e8f0;
+      border-top-color: var(--primary-green);
+      border-radius: 50%;
+      animation: reviewSpin 0.75s linear infinite;
+    }
+
+    @keyframes reviewSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ============================================================
+       MODALS & TOAST
+       ============================================================ */
+    body[data-page="monitored-apps"] .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.45);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    body[data-page="monitored-apps"] .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    body[data-page="monitored-apps"] .modal-card {
+      background: #ffffff;
+      width: 460px;
+      max-width: 92vw;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    }
+
+    body[data-page="monitored-apps"] .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    body[data-page="monitored-apps"] .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    body[data-page="monitored-apps"] .modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    body[data-page="monitored-apps"] .toast-message {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: var(--primary-green);
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    body[data-page="monitored-apps"] .toast-message.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 1100px) {
+
+      body[data-page="monitored-apps"] .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    
+}
+
+    body[data-page="monitored-apps"] .team-member-modal-card {
+      max-width: 560px;
+      width: 100%;
+      border-radius: 24px;
+      padding: 26px 28px;
+      overflow: visible;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-icon-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--border-soft, #e2e8f0);
+      background: var(--bg-canvas, #f8fafc);
+      color: var(--text-dark, #0f172a);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-subtitle {
+      font-size: 12.5px;
+      color: var(--text-muted, #64748b);
+      margin-top: 2px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted, #94a3b8);
+      padding: 10px 0 16px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-soft, #e2e8f0);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-breadcrumb-active {
+      color: var(--primary-green, #2563eb);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      align-items: center;
+      gap: 14px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dark, #334155);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-pill-input {
+      width: 100%;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft, #cbd5e1);
+      background: var(--bg-card, #ffffff);
+      color: var(--text-dark, #0f172a);
+      padding: 0 16px;
+      font-size: 13.5px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-pill-input:focus {
+      border-color: var(--primary-green, #2563eb);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-phone-group {
+      display: flex;
+      align-items: center;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft, #cbd5e1);
+      background: var(--bg-card, #ffffff);
+      overflow: hidden;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-phone-group:focus-within {
+      border-color: var(--primary-green, #2563eb);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-phone-code {
+      height: 100%;
+      border: none;
+      border-right: 1px solid var(--border-soft, #e2e8f0);
+      background: transparent;
+      color: var(--text-dark, #0f172a);
+      padding: 0 10px 0 14px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-phone-input {
+      flex: 1;
+      height: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text-dark, #0f172a);
+      padding: 0 16px 0 12px;
+      font-size: 13.5px;
+      font-family: inherit;
+      outline: none;
+      min-width: 0;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-upload-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-avatar-preview {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 1px solid var(--border-soft, #e2e8f0);
+      background: var(--bg-canvas, #f1f5f9);
+      color: var(--text-muted, #64748b);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-dropzone {
+      flex: 1;
+      border: 1px dashed var(--border-soft, #cbd5e1);
+      border-radius: 14px;
+      padding: 12px 14px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--bg-canvas, #f8fafc);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-dropzone:hover,
+    body[data-page="monitored-apps"] .team-modal-dropzone.dragging {
+      border-color: var(--primary-green, #2563eb);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-footer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+      padding-top: 8px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-btn-cancel {
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft, #d1d5db);
+      background: var(--bg-card, #ffffff);
+      color: var(--text-dark, #0f172a);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-btn-save {
+      height: 44px;
+      border-radius: 999px;
+      font-size: 13.5px;
+      font-weight: 600;
+      justify-content: center;
+    }
+
+    @media (max-width: 600px) {
+      body[data-page="monitored-apps"] .team-modal-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-chevron {
+      color: var(--text-muted, #64748b);
+      transition: transform 0.16s ease;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-chevron.open {
+      transform: rotate(180deg);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card, #ffffff);
+      border: 1px solid var(--border-soft, #e2e8f0);
+      border-radius: 18px;
+      padding: 8px;
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.05);
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      animation: teamDropdownIn 0.14s ease-out;
+    }
+
+    @keyframes teamDropdownIn {
+      from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-value {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-role-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-option {
+      width: 100%;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 12px;
+      padding: 9px 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-align: left;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--text-dark, #0f172a);
+      transition: background-color 0.14s ease, border-color 0.14s ease;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-option:hover {
+      background: var(--bg-canvas, #f8fafc);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-option.selected {
+      background: var(--bg-canvas, #f1f5f9);
+      border-color: var(--border-soft, #e2e8f0);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-option-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-option-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border-soft, #e2e8f0);
+      background: var(--bg-canvas, #f8fafc);
+      color: var(--text-dark, #334155);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-option-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-dark, #0f172a);
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-option-desc {
+      font-size: 11.5px;
+      color: var(--text-muted, #64748b);
+      margin-top: 1px;
+    }
+
+    body[data-page="monitored-apps"] .team-modal-select-check {
+      color: var(--primary-green, #2563eb);
+      flex-shrink: 0;
+    }
+
+    body[data-page="monitored-apps"] .apps-table.team-table {
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    body[data-page="monitored-apps"] .apps-table.team-table th,
+    body[data-page="monitored-apps"] .apps-table.team-table td {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    body[data-page="monitored-apps"] .apps-table.team-table th:nth-child(1) {
+      width: 24%;
+    }
+
+    body[data-page="monitored-apps"] .apps-table.team-table th:nth-child(2) {
+      width: 28%;
+    }
+
+    body[data-page="monitored-apps"] .apps-table.team-table th:nth-child(3) {
+      width: 11%;
+    }
+
+    body[data-page="monitored-apps"] .apps-table.team-table th:nth-child(4) {
+      width: 14%;
+    }
+
+    body[data-page="monitored-apps"] .apps-table.team-table th:nth-child(5),
+    body[data-page="monitored-apps"] .apps-table.team-table td:nth-child(5) {
+      width: 14%;
+      text-align: right;
+      padding-right: 20px;
+    }
+
+    body[data-page="monitored-apps"] .apps-table.team-table th:nth-child(6) {
+      width: 9%;
+    }
+  

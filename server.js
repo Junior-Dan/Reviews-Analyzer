@@ -12,12 +12,44 @@ const PORT = process.env.PORT || 5501;
 // Initialize database connection
 connectDB();
 
-// Serve static frontend files and define API routes
-app.use(express.static(path.join(__dirname, "public")));
+// Serve static frontend files (React/Vite dist build + public static assets) and define API routes
+const distDir = path.join(__dirname, "dist");
+const distIndex = path.join(distDir, "index.html");
 
-// Root route redirects to dashboard.html
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "dashboard.html"));
+app.use(express.static(distDir));
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
+
+const spaRoutes = [
+  "/",
+  "/dashboard",
+  "/dashboard.html",
+  "/reviews",
+  "/messages",
+  "/messages.html",
+  "/monitored-apps",
+  "/monitored-apps.html",
+  "/integrations",
+  "/integrations.html",
+  "/alerts",
+  "/alerts.html",
+  "/settings",
+  "/settings.html",
+  "/team",
+  "/teams",
+  "/login",
+  "/login.html",
+  "/register",
+  "/register.html",
+  "/privacy",
+  "/privacy.html",
+  "/terms",
+  "/terms.html",
+];
+
+spaRoutes.forEach((routePath) => {
+  app.get(routePath, (req, res) => {
+    res.sendFile(distIndex);
+  });
 });
 
 app.use("/dashboard", dashboardRouter);

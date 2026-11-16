@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "concurrently \"ollama serve\" \"npm start\"",
+    "dev:client": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,6 +20,7 @@
     "app-store-scraper": "^0.18.0",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
+    "chart.js": "^4.6.1",
     "cheerio": "^1.1.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -24,9 +28,20 @@
     "google-play-scraper": "^10.1.2",
     "googleapis": "^169.0.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.0.2"
+    "mongoose": "^9.0.2",
+    "nodemailer": "^10.6.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
   }
 }

@@ -24,19 +24,35 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["Developer", "Admin", "Support"],
       default: "Developer"
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local"
+    },
+    googleId: {
+      type: String,
+      default: null
+    },
+    avatar: {
+      type: String,
+      default: null
+    },
+    companyLogo: {
+      type: String,
+      default: null
     }
   },
   { timestamps: true }
 );
 
 // Encrypt password using bcrypt before saving
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    return next();
+userSchema.pre("save", async function () {
+  if (!this.isModified("password") || !this.password) {
+    return;
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 // Method to compare entered password with hashed password

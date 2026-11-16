@@ -92,7 +92,7 @@ async function fetchAppleReviews(appId) {
             
             while (page <= 10 && hasMore) {
                 const pageReviews = await store.reviews({
-                    appId: appId,
+                    id: appId,
                     sort: store.sort.RECENT,
                     page: page
                 });

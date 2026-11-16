@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <title>Reviews Analyzer - Executive Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="preload" as="image" href="/system-logo.png" />
+  <script>
+    (function () {
+      try {
+        var raw = localStorage.getItem('reviewsAiSettings');
+        var parsed = raw ? JSON.parse(raw) : null;
+        var mode = parsed ? parsed.theme : 'light';
+        var resolved = mode === 'system'
+          ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : (mode === 'dark' ? 'dark' : 'light');
+        document.documentElement.dataset.theme = resolved;
+        if (parsed && typeof parsed.brandColor === 'string' && /^#?[0-9a-fA-F]{6}$/.test(parsed.brandColor.trim())) {
+          var bc = parsed.brandColor.trim();
+          document.documentElement.style.setProperty('--brand-color', (bc.charAt(0) === '#' ? bc : '#' + bc).toUpperCase());
+          document.documentElement.dataset.hasBrandColor = 'true';
+        }
+        var p = window.location.pathname.replace(/\.html$/, '').replace(/^\//, '').replace(/\/+$/, '');
+        var isLightPublic = p === '' || p === 'login' || p === 'register' || p === 'privacy' || p === 'terms';
+        if (isLightPublic) {
+          document.documentElement.dataset.theme = 'light';
+        }
+        document.documentElement.style.backgroundColor = isLightPublic ? '#e1e6e2' : (resolved === 'dark' ? '#050505' : '#17533b');
+      } catch (e) {
+        document.documentElement.dataset.theme = 'light';
+      }
+      setTimeout(function () {
+        document.documentElement.classList.add('app-ready');
+      }, 1500);
+    })();
+  </script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      background-color: #17533b;
+    }
+
+    html[data-theme="dark"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) {
+      background-color: #050505;
+    }
+
+    html:not(.app-ready) body {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    #root {
+      display: contents;
+    }
+  </style>
+</head>
+
+<body data-page="login">
+  <script>
+    (function () {
+      var p = window.location.pathname.replace(/\.html$/, '').replace(/^\//, '').replace(/\/+$/, '');
+      var map = {
+        '': 'login',
+        dashboard: 'dashboard',
+        reviews: 'messages',
+        messages: 'messages',
+        'monitored-apps': 'monitored-apps',
+        integrations: 'integrations',
+        alerts: 'alerts',
+        settings: 'settings',
+        team: 'monitored-apps',
+        teams: 'monitored-apps',
+        login: 'login',
+        register: 'register',
+      };
+      document.body.dataset.page = map[p] || 'login';
+    })();
+  </script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

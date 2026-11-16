@@ -8,6 +8,7 @@ const { fetchAmazonReviews } = require("../connectors/amazon/amazon.connector");
 const Review = require("../core/review.model");
 const App = require("../core/app.model");
 const ollamaService = require("../core/ollama.service");
+const { protect } = require("../middleware/auth.middleware");
 
 // Helper to clean review text
 const cleanReviewText = (text) => {
@@ -19,8 +20,12 @@ const cleanReviewText = (text) => {
  * GET /reviews
  * Query: platform (google, apple, roku, etc.), appId
  */
-router.get("/", async (req, res) => {
-  try {
+router.get("/", (req, res, next) => {
+  if (req.headers.accept && req.headers.accept.includes("text/html")) {
+    return next();
+  }
+  return protect(req, res, async () => {
+    try {
     let { platform, appId, packageName } = req.query;
 
     if (packageName && !appId) appId = packageName;
@@ -126,10 +131,11 @@ router.get("/", async (req, res) => {
     const calculatedAvg = processedReviews.length > 0 ? (totalRating / processedReviews.length).toFixed(1) : 0;
     stats.avgRating = scrapedStats?.avgRating || calculatedAvg;
 
-    // 4. Update App Registry
+    const ownerId = req.workspaceOwnerId || req.user._id;
+    // 4. Update App Registry for the workspace owner
     await App.findOneAndUpdate(
-      { platform, appId },
-      { $set: { name: appId, platform, appId } },
+      { user: ownerId, platform: plat, appId },
+      { $setOnInsert: { name: appId, user: ownerId, platform: plat, appId } },
       { upsert: true }
     );
 
@@ -138,6 +144,7 @@ router.get("/", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
+  });
 });
 
 module.exports = router;

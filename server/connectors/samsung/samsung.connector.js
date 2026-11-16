@@ -1,16 +1,26 @@
 const axios = require("axios");
 
+const SAMSUNG_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "application/json, text/plain, */*",
+  "Referer": "https://galaxystore.samsung.com/"
+};
+
 // Fetch reviews from Samsung Galaxy Store internal APIs
 async function fetchSamsungReviews(appId) {
   try {
     let contentId = appId;
+    const headers = {
+      ...SAMSUNG_HEADERS,
+      Referer: `https://galaxystore.samsung.com/detail/${appId}`
+    };
 
     // Resolve package name to numeric contentId if necessary
     if (!/^\d+$/.test(appId)) {
       const { data: details } = await axios.get(`https://galaxystore.samsung.com/api/detail/${appId}`, {
-        headers: { "User-Agent": "Mozilla/5.0" }
+        headers
       });
-      if (details.errCode !== "0000") return [];
+      if (!details || (details.errCode && details.errCode !== "0000")) return [];
       contentId = details.contentId;
     }
 
@@ -24,7 +34,7 @@ async function fetchSamsungReviews(appId) {
 
     while (reviews.length < 500 && hasMore) {
       const { data } = await axios.get(`https://galaxystore.samsung.com/api/commentList/contentId=${contentId}&startNum=${startNum}`, {
-        headers: { "User-Agent": "Mozilla/5.0" }
+        headers
       });
 
       // Relaxed errCode check since successful response might not have it
