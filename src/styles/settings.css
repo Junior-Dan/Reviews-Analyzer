@@ -7,7 +7,7 @@
       --card-inner: #f7f9f7;
       --text-dark: #0f172a;
       --text-muted: #64748b;
-      --primary-green: #475569;
+      --primary-green: #17533b;
       --accent-blue: #2563eb;
       --accent-mint: #4ea67e;
       --border-soft: #e2e8f0;
@@ -273,7 +273,7 @@
     }
 
     body[data-page="settings"] .btn-action-solid:hover {
-      background-color: #12402d;
+      opacity: 0.9;
     }
 
     body[data-page="settings"] .icon-btn {
@@ -844,7 +844,7 @@
     }
 
     body[data-page="settings"] .btn-save-primary:hover {
-      background: #12402d;
+      opacity: 0.9;
     }
 
     /* Security & Privacy Layout */

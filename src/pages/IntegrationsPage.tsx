@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
+import { SkeletonBox } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { authFetch } from '../utils/api';
 import '../styles/integrations.css';
@@ -243,6 +244,7 @@ export function IntegrationsPage() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const [activeModal, setActiveModal] = useState<IntegrationsModal>(null);
   const [selectedInt, setSelectedInt] = useState<IntegrationItem | null>(null);
@@ -283,7 +285,10 @@ export function IntegrationsPage() {
   };
 
   useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 2000);
+    const t = window.setTimeout(() => {
+      setLoading(false);
+      setHasLoadedOnce(true);
+    }, 2000);
     const closeMenus = () => {
       setOpenCardMenuId(null);
       setStatusDropdownOpen(false);
@@ -566,7 +571,27 @@ export function IntegrationsPage() {
               </div>
 
               <div id="integrationsGridContainer">
-                {loading ? (
+                {loading && !hasLoadedOnce ? (
+                  <div className="integrations-grid" aria-busy="true">
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                      <div key={`int-sk-${idx}`} className="int-card" aria-hidden="true">
+                        <div className="int-card-body">
+                          <div className="int-card-top">
+                            <SkeletonBox width={44} height={44} borderRadius={12} style={{ flexShrink: 0 }} />
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <SkeletonBox width="55%" height={15} />
+                              <SkeletonBox width="80%" height={12} />
+                            </div>
+                          </div>
+                          <div style={{ marginTop: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <SkeletonBox width={78} height={22} borderRadius={999} />
+                            <SkeletonBox width={42} height={22} borderRadius={999} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : loading ? (
                   <div className="loader-cell-wrap">
                     <div className="circular-spinner"></div>
                   </div>

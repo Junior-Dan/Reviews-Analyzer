@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
+import { SkeletonTableRows } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { authFetch, getStoredUser, getToken } from '../utils/api';
@@ -1018,7 +1019,20 @@ export function AuditLogsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {loading ? (
+                    {loading && events.length === 0 ? (
+                      <SkeletonTableRows
+                        rows={6}
+                        columns={[
+                          { width: 72 },
+                          { width: 120 },
+                          { width: 140 },
+                          { width: 100 },
+                          { width: 220 },
+                          { width: 110 },
+                          { width: 32, align: 'right' },
+                        ]}
+                      />
+                    ) : loading ? (
                       <tr>
                         <td colSpan={7} className="loader-td">
                           <div className="loader-cell-wrap">

@@ -11,7 +11,7 @@ html[data-theme="dark"] body:not([data-page="login"]):not([data-page="register"]
   --card-inner: #1a1a1f;
   --text-dark: #ffffff;
   --text-muted: #ffffff;
-  --primary-green: #71717a;
+  --primary-green: #17533b;
   --accent-mint: #34d399;
   --accent-mint-light: #6ee7b7;
   --badge-up-bg: rgba(16, 185, 129, 0.16);
@@ -483,6 +483,7 @@ html[data-theme="dark"] body:not([data-page="login"]):not([data-page="register"]
 
 /* Custom Brand Color overrides (applies ONLY to buttons and tabs; everything else stays default) */
 html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-save-settings,
+html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-save-primary,
 html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-primary,
 html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-add-app,
 html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-add-app-primary,
@@ -497,7 +498,9 @@ html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="
 html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .period-pill.active,
 html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .page-num-btn.active,
 html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .cal-preset-btn.active,
+html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .preview-option-card.selected .preview-check-badge,
 html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-save-settings,
+html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-save-primary,
 html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-primary,
 html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-add-app,
 html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .btn-add-app-primary,
@@ -511,10 +514,17 @@ html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"
 html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .platform-pill.active,
 html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .period-pill.active,
 html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .page-num-btn.active,
-html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .cal-preset-btn.active {
+html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .cal-preset-btn.active,
+html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .preview-option-card.selected .preview-check-badge {
   background-color: var(--brand-color) !important;
   border-color: var(--brand-color) !important;
   color: #ffffff !important;
+}
+
+html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .preview-option-card.selected .preview-mockup-box,
+html[data-theme="dark"][data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .preview-option-card.selected .preview-mockup-box {
+  border-color: var(--brand-color) !important;
+  box-shadow: none !important;
 }
 
 html[data-has-brand-color="true"] body:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .top-bar .btn-action-outline,
@@ -859,10 +869,6 @@ body[data-page]:not([data-page="login"]):not([data-page="register"]):not([data-p
   flex-shrink: 0 !important;
 }
 
-html[data-theme="dark"] body[data-page]:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .top-bar .icon-btn {
-  color: #a1a1aa !important;
-}
-
 body[data-page]:not([data-page="login"]):not([data-page="register"]):not([data-page="legal"]) .top-bar .alert-badge-dot {
   position: absolute !important;
   top: 6px !important;
@@ -883,4 +889,35 @@ body[data-page]:not([data-page="login"]):not([data-page="register"]):not([data-p
   color: #ffffff !important;
   box-shadow: 0 2px 6px rgba(23, 83, 59, 0.25) !important;
   flex-shrink: 0 !important;
+}
+
+/* ============================================================
+   SKELETON SHIMMER (LIGHT & DARK THEME)
+   ============================================================ */
+@keyframes sentriqeSkeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  display: inline-block;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: sentriqeSkeletonShimmer 1.5s linear infinite;
+  border-radius: 8px;
+}
+
+html[data-theme="dark"] .skeleton-shimmer {
+  background: linear-gradient(90deg, #1a1a1f 25%, #27272a 50%, #1a1a1f 75%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
 }

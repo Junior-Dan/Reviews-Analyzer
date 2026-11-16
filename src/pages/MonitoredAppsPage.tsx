@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlatformWordmark } from '../components/PlatformWordmark';
 import { Sidebar } from '../components/Sidebar';
+import { SkeletonTableRows } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { authFetch } from '../utils/api';
@@ -747,7 +748,20 @@ export function MonitoredAppsPage() {
                     </tr>
                   </thead>
                   <tbody id="appsTableBody">
-                    {loading ? (
+                    {loading && allApps.length === 0 ? (
+                      <SkeletonTableRows
+                        rows={6}
+                        columns={[
+                          { width: 140, hasIcon: 'square', twoLines: true },
+                          { width: 90 },
+                          { width: 65 },
+                          { width: 65 },
+                          { width: 95 },
+                          { width: 90 },
+                          { width: 72, align: 'right' },
+                        ]}
+                      />
+                    ) : loading ? (
                       <tr>
                         <td colSpan={7} className="loader-td" style={{ background: '#ffffff' }}>
                           <div className="loader-cell-wrap">

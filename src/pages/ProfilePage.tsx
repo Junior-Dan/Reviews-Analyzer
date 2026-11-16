@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
+import { SkeletonBox } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { authFetch, clearAuthSession, getStoredUser, getToken, setAuthSession } from '../utils/api';
@@ -52,6 +53,7 @@ export function ProfilePage() {
   const [editingCompany, setEditingCompany] = useState(false);
   const [draftCompany, setDraftCompany] = useState(String(stored.companyName || ''));
   const [saving, setSaving] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(!stored.email);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   const isAdmin = workspaceRole === 'owner' || workspaceRole === 'admin';
@@ -91,6 +93,8 @@ export function ProfilePage() {
         setAuthSession({ ...stored, ...data });
       } catch {
         // Keep stored values on transient error
+      } finally {
+        if (!cancelled) setProfileLoading(false);
       }
     }
     loadProfile();
@@ -410,7 +414,7 @@ export function ProfilePage() {
                         color: 'var(--text-dark)',
                       }}
                     >
-                      {displayName}
+                      {profileLoading && !email ? <SkeletonBox width={130} height={18} /> : displayName}
                     </span>
                   </div>
 
@@ -459,7 +463,11 @@ export function ProfilePage() {
                       color: 'var(--text-dark)',
                     }}
                   >
-                    {email || '—'}
+                    {profileLoading && !email ? (
+                      <SkeletonBox width={190} height={16} style={{ margin: '0 auto' }} />
+                    ) : (
+                      email || '—'
+                    )}
                   </div>
                 </div>
 
@@ -517,7 +525,7 @@ export function ProfilePage() {
                           color: 'var(--text-muted)',
                         }}
                       >
-                        {displayName}
+                        {profileLoading && !email ? <SkeletonBox width={120} height={15} /> : displayName}
                       </span>
                     )}
 

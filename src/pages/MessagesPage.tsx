@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PlatformWordmark } from '../components/PlatformWordmark';
 import { Sidebar } from '../components/Sidebar';
+import { SkeletonTableRows } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { authFetch } from '../utils/api';
@@ -922,7 +923,22 @@ export function MessagesPage() {
                     </tr>
                   </thead>
                   <tbody id="reviewsTbody">
-                    {reviewsLoading ? (
+                    {reviewsLoading && globalReviews.length === 0 ? (
+                      <SkeletonTableRows
+                        rows={7}
+                        columns={[
+                          { width: 80 },
+                          { width: 110 },
+                          { width: 80 },
+                          { width: 60 },
+                          { width: 190 },
+                          { width: 75 },
+                          { width: 90 },
+                          { width: 150 },
+                          { width: 68 },
+                        ]}
+                      />
+                    ) : reviewsLoading ? (
                       <tr>
                         <td colSpan={9} className="loader-td" style={{ background: '#ffffff' }}>
                           <div className="loader-cell-wrap">

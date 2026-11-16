@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
+import { SkeletonTableRows } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { authFetch } from '../utils/api';
@@ -587,7 +588,19 @@ export function TeamPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {loadingMembers ? (
+                    {loadingMembers && members.length === 0 ? (
+                      <SkeletonTableRows
+                        rows={6}
+                        columns={[
+                          { width: 130, hasIcon: 'circle' },
+                          { width: 170 },
+                          { width: 70 },
+                          { width: 95 },
+                          { width: 95 },
+                          { width: 64, align: 'right' },
+                        ]}
+                      />
+                    ) : loadingMembers ? (
                       <tr>
                         <td colSpan={6} className="loader-td">
                           <div className="loader-cell-wrap">

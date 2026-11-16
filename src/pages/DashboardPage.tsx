@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Chart from 'chart.js/auto';
 import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
+import { SkeletonBox } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { authFetch } from '../utils/api';
 import '../styles/dashboard.css';
@@ -90,6 +91,7 @@ export function DashboardPage() {
   const [topCategories, setTopCategories] = useState(['0 rev', '0 rev', '0 rev']);
   const [topChannels, setTopChannels] = useState(['0.0 ★', '0.0 ★', '0.0 ★']);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [trendStats, setTrendStats] = useState({ positive: 0, bugs: 0, total: 0 });
   const monthlyTrendsRef = useRef<{ name: string; total: number; positive: number; negative: number }[]>([]);
 
@@ -307,6 +309,8 @@ export function DashboardPage() {
         }
       } catch (err) {
         console.error('Error loading summary:', err);
+      } finally {
+        setSummaryLoading(false);
       }
     };
 
@@ -635,7 +639,7 @@ export function DashboardPage() {
                   <div className="metric-row">
                     <div className="metric-main">
                       <div className="metric-num" id="kpiAnalyzedVal">
-                        {kpiAnalyzedVal}
+                        {summaryLoading ? <SkeletonBox width={64} height={26} /> : kpiAnalyzedVal}
                       </div>
                       <div className="metric-label">Analyzed Reviews</div>
                     </div>
@@ -648,7 +652,7 @@ export function DashboardPage() {
 
                     <div className="metric-sub-group">
                       <div className="metric-sub-val" id="kpiPosPercentVal">
-                        {kpiPosPercentVal}
+                        {summaryLoading ? <SkeletonBox width={48} height={22} /> : kpiPosPercentVal}
                       </div>
                       <div className="metric-label">Positive Sentiment</div>
                     </div>
@@ -665,7 +669,7 @@ export function DashboardPage() {
                   <div className="metric-row">
                     <div className="metric-main">
                       <div className="metric-num" id="kpiStoreTotalVal">
-                        {kpiStoreTotalVal}
+                        {summaryLoading ? <SkeletonBox width={64} height={26} /> : kpiStoreTotalVal}
                       </div>
                       <div className="metric-label">Total Store Reach</div>
                     </div>
@@ -678,7 +682,7 @@ export function DashboardPage() {
 
                     <div className="metric-sub-group">
                       <div className="metric-sub-val" id="kpiReplyTimeVal">
-                        {kpiReplyTimeVal}
+                        {summaryLoading ? <SkeletonBox width={48} height={22} /> : kpiReplyTimeVal}
                       </div>
                       <div className="metric-label">Response Rate</div>
                     </div>
@@ -813,19 +817,25 @@ export function DashboardPage() {
                   <div className="trend-metrics-row">
                     <div className="trend-metric-col">
                       <div className="trend-metric-val" id="statSoldOut">
-                        {trendStats.positive.toLocaleString()}
+                        {summaryLoading ? <SkeletonBox width={46} height={20} /> : trendStats.positive.toLocaleString()}
                       </div>
                       <div className="trend-metric-sub">Positive</div>
                     </div>
                     <div className="trend-metric-col">
                       <div className="trend-metric-val" id="statRefund">
-                        {trendStats.bugs.toLocaleString()}
+                        {summaryLoading ? <SkeletonBox width={46} height={20} /> : trendStats.bugs.toLocaleString()}
                       </div>
                       <div className="trend-metric-sub">Critical Bugs</div>
                     </div>
                     <div className="trend-metric-col">
                       <div className="trend-metric-val" id="statStock">
-                        {trendStats.total >= 1000 ? `${(trendStats.total / 1000).toFixed(1)}K` : trendStats.total.toLocaleString()}
+                        {summaryLoading ? (
+                          <SkeletonBox width={46} height={20} />
+                        ) : trendStats.total >= 1000 ? (
+                          `${(trendStats.total / 1000).toFixed(1)}K`
+                        ) : (
+                          trendStats.total.toLocaleString()
+                        )}
                       </div>
                       <div className="trend-metric-sub">Total Feedback</div>
                     </div>
