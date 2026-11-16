@@ -1,11 +1,10 @@
-import { ChangeEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { authFetch, getStoredUser } from '../utils/api';
-import { applyBrandColor, applyTheme, getCompanyLogo, setCompanyLogo, type ThemeMode } from '../utils/theme';
+import { applyBrandColor, applyTheme, type ThemeMode } from '../utils/theme';
 import '../styles/settings.css';
 
 type SettingsSection = 'appearance' | 'security';
@@ -41,9 +40,6 @@ export function SettingsPage() {
   const [hexInput, setHexInput] = useState('2C68F6');
   const [selectedTheme, setSelectedTheme] = useState('system');
   const [selectedTableView, setSelectedTableView] = useState('default');
-  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(() => getCompanyLogo());
-  const [logoRemoved, setLogoRemoved] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Security / 2FA state
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
@@ -125,45 +121,6 @@ export function SettingsPage() {
     if (cleaned.length === 6) {
       setSelectedBrandColor(cleaned);
     }
-  };
-
-  const persistCompanyLogo = async (dataUrl: string | null) => {
-    setLogoDataUrl(dataUrl);
-    setCompanyLogo(dataUrl);
-    try {
-      const stored = getStoredUser();
-      localStorage.setItem('user', JSON.stringify({ ...stored, companyLogo: dataUrl }));
-    } catch {
-      // ignore
-    }
-
-    try {
-      const res = await authFetch('/api/auth/company-logo', {
-        method: 'PATCH',
-        body: JSON.stringify({ companyLogo: dataUrl }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        showToast(err.message || 'Saved locally (database sync failed)');
-        return;
-      }
-      showToast(dataUrl ? 'Company logo saved' : 'Company logo removed');
-    } catch {
-      showToast(dataUrl ? 'Company logo updated locally' : 'Company logo removed');
-    }
-  };
-
-  const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (typeof ev.target?.result === 'string') {
-        setLogoRemoved(false);
-        void persistCompanyLogo(ev.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const saveAppearanceSettings = () => {
@@ -258,10 +215,7 @@ export function SettingsPage() {
 
           <div className="page-scroll-body">
             <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-title" id="settingsSectionTitle">
-                  {section === 'security' ? 'Security' : 'Appearance'}
-                </div>
+              <div className="settings-card-header" style={{ justifyContent: 'flex-start' }}>
                 <div className="settings-header-right">
                   <div className="settings-section-pills">
                     <button
@@ -288,79 +242,6 @@ export function SettingsPage() {
                 id="sectionAppearance"
                 style={{ display: section === 'appearance' ? 'block' : 'none' }}
               >
-                {rowMatches('company logo brand image upload') && (
-                  <div className="settings-row">
-                    <div>
-                      <div className="settings-label-title">Company logo</div>
-                      <div className="settings-label-sub">Update your company logo.</div>
-                    </div>
-                    <div className="settings-control-area">
-                      <div className="logo-preview-group" style={{ position: 'relative', display: 'inline-flex' }}>
-                        <div className="company-logo-box" id="companyLogoPreview">
-                          {logoDataUrl ? (
-                            <img src={logoDataUrl} alt="Company logo" />
-                          ) : logoRemoved ? (
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>NONE</span>
-                          ) : (
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round">
-                              <line x1="12" y1="2" x2="12" y2="6"></line>
-                              <line x1="12" y1="18" x2="12" y2="22"></line>
-                              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
-                              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
-                              <line x1="2" y1="12" x2="6" y2="12"></line>
-                              <line x1="18" y1="12" x2="22" y2="12"></line>
-                              <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
-                              <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
-                            </svg>
-                          )}
-                        </div>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          id="logoFileInput"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={handleLogoUpload}
-                        />
-                        <button
-                          type="button"
-                          className="btn-sec-plus"
-                          style={{
-                            position: 'absolute',
-                            bottom: '-6px',
-                            right: '-6px',
-                            width: '22px',
-                            height: '22px',
-                            borderRadius: '50%',
-                            background: 'var(--primary-green)',
-                            color: '#ffffff',
-                            border: '2px solid #ffffff',
-                            boxShadow: '0 2px 5px rgba(15, 23, 42, 0.16)',
-                          }}
-                          onClick={() => fileInputRef.current?.click()}
-                          title="Upload new logo"
-                          aria-label="Upload new logo"
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                          </svg>
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn-soft-danger"
-                        onClick={() => {
-                          setLogoRemoved(true);
-                          void persistCompanyLogo(null);
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {rowMatches('brand color accent theme custom hex') && (
                   <div className="settings-row">
                     <div>

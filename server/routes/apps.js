@@ -4,6 +4,7 @@ const gplay = require("google-play-scraper").default || require("google-play-scr
 const appleStore = require("app-store-scraper");
 const App = require("../core/app.model");
 const Review = require("../core/review.model");
+const { logAuditEvent } = require("../utils/auditLogger");
 const { protect } = require("../middleware/auth.middleware");
 
 router.use(protect);
@@ -117,6 +118,17 @@ router.post("/", async (req, res) => {
       user: ownerId
     });
 
+    void logAuditEvent({
+      owner: ownerId,
+      actor: req.user._id,
+      actorEmail: req.user.email,
+      severity: "LOW",
+      action: "APP ADDED",
+      entity: "App",
+      description: `Added ${name} (${normalizedPlatform}:${appId})`,
+      metadata: { appId, platform: normalizedPlatform },
+    });
+
     res.status(201).json({ message: "App added successfully", app });
   } catch (err) {
     console.error("Add app error:", err);
@@ -138,6 +150,17 @@ router.delete("/:id", async (req, res) => {
     if (!app) {
       return res.status(404).json({ message: "App not found" });
     }
+
+    void logAuditEvent({
+      owner: ownerId,
+      actor: req.user._id,
+      actorEmail: req.user.email,
+      severity: "MEDIUM",
+      action: "APP REMOVED",
+      entity: "App",
+      description: `Removed ${app.name || app.appId} (${app.platform})`,
+      metadata: { appId: app.appId, platform: app.platform },
+    });
 
     res.json({ message: "App removed successfully" });
   } catch (err) {

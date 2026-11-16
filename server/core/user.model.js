@@ -41,6 +41,30 @@ const userSchema = new mongoose.Schema(
     companyLogo: {
       type: String,
       default: null
+    },
+    companyName: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    billingPlan: {
+      type: String,
+      enum: ["free", "pro", "enterprise"],
+      default: "free"
+    },
+    billingEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: ""
+    },
+    lastActiveAt: {
+      type: Date,
+      default: null
+    },
+    auditLogsLastSeenAt: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }

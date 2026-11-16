@@ -2,8 +2,8 @@ import type { KeyboardEvent } from 'react';
 
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { clearAuthSession, getStoredUser } from '../utils/api';
-import { getCompanyLogo } from '../utils/theme';
+import { authFetch, clearAuthSession, getActiveWorkspaceId, getStoredUser, setActiveWorkspaceId, setAuthSession } from '../utils/api';
+import { getCompanyLogo, setCompanyLogo } from '../utils/theme';
 
 function getInitials(name?: string, email?: string): string {
   const cleaned = (name || '').trim();
@@ -49,12 +49,19 @@ export function TopBar({
   const menuWrapRef = useRef<HTMLDivElement | null>(null);
   const [imgError, setImgError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [orgMenuOpen, setOrgMenuOpen] = useState(false);
+  const [orgs, setOrgs] = useState<Array<{ id: string; name: string; companyLogo: string | null; role: string }>>([]);
+  const [activeOrgId, setActiveOrgId] = useState<string>(() => getActiveWorkspaceId() || '');
   const [companyLogo, setCompanyLogoState] = useState<string | null>(() => getCompanyLogo());
 
   const storedUser = getStoredUser();
   const displayName = (storedUser.name || storedUser.email || 'User').toString();
   const email = (storedUser.email || '').toString();
   const role = (storedUser.role || 'Member').toString();
+  const companyName =
+    typeof storedUser.companyName === 'string' && storedUser.companyName.trim()
+      ? storedUser.companyName.trim()
+      : 'Workspace';
   const googleAvatar = typeof storedUser.avatar === 'string' && storedUser.avatar.trim() ? storedUser.avatar.trim() : '';
   const avatarUrl = companyLogo || googleAvatar;
   const initials = getInitials(storedUser.name, storedUser.email);
@@ -142,6 +149,33 @@ export function TopBar({
       </div>
 
       <div className="top-actions" style={{ marginRight: '14px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '4px' }}>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => navigate(-1)}
+            title="Go Back"
+            aria-label="Go Back"
+            style={{ width: 32, height: 32, border: 'none', background: 'transparent', boxShadow: 'none', padding: 0 }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => navigate(1)}
+            title="Go Forward"
+            aria-label="Go Forward"
+            style={{ width: 32, height: 32, border: 'none', background: 'transparent', boxShadow: 'none', padding: 0 }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
         <button className="btn-action-outline" onClick={onAddApp} style={{ borderRadius: '10px' }}>
           <svg
             width="13"
@@ -221,18 +255,158 @@ export function TopBar({
           {menuOpen && (
             <div className="avatar-dropdown-card" role="menu">
               <div className="avatar-dropdown-header">
-                <div className="avatar-dropdown-mini">
-                  {avatarUrl && !imgError ? (
-                    <img
-                      src={avatarUrl}
-                      alt={displayName}
-                      referrerPolicy="no-referrer"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    />
-                  ) : (
-                    initials
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const next = !orgMenuOpen;
+                    setOrgMenuOpen(next);
+                    if (next && orgs.length === 0) {
+                      try {
+                        const res = await authFetch('/api/auth/workspaces');
+                        if (res.ok) {
+                          const data = await res.json();
+                          setOrgs(data.workspaces || []);
+                          if (data.activeWorkspaceId) setActiveOrgId(data.activeWorkspaceId);
+                        }
+                      } catch {
+                        // ignore
+                      }
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: '4px 6px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: orgMenuOpen ? 'var(--card-inner, #f1f5f9)' : 'transparent',
+                    cursor: 'pointer',
+                  }}
+                  title="Switch organization"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <div className="avatar-dropdown-mini">
+                      {avatarUrl && !imgError ? (
+                        <img
+                          src={avatarUrl}
+                          alt={companyName}
+                          referrerPolicy="no-referrer"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                      ) : (
+                        initials
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: 700,
+                        color: 'var(--text-dark, #18181b)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: 120,
+                        textAlign: 'left',
+                      }}
+                      title={companyName}
+                    >
+                      {companyName}
+                    </div>
+                  </div>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      flexShrink: 0,
+                      marginLeft: -2,
+                      color: 'var(--text-muted, #64748b)',
+                      transform: orgMenuOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.15s ease',
+                    }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                {orgMenuOpen && (
+                  <div
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4,
+                      padding: '6px',
+                      borderRadius: 10,
+                      background: 'var(--card-inner, #f8fafc)',
+                      border: '1px solid var(--border-soft, #e2e8f0)',
+                    }}
+                  >
+                    {(orgs.length > 0
+                      ? orgs
+                      : [{ id: String(storedUser.workspaceId || storedUser._id || ''), name: companyName, companyLogo, role }]
+                    ).map((org) => {
+                      const isCurrent = org.id === (activeOrgId || String(storedUser.workspaceId || storedUser._id || ''));
+                      return (
+                        <button
+                          key={org.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveWorkspaceId(org.id);
+                            setActiveOrgId(org.id);
+                            setAuthSession({
+                              ...storedUser,
+                              companyName: org.name,
+                              companyLogo: org.companyLogo,
+                              workspaceRole: org.role,
+                              workspaceId: org.id,
+                            });
+                            setCompanyLogo(org.companyLogo);
+                            setOrgMenuOpen(false);
+                            setMenuOpen(false);
+                            window.location.reload();
+                          }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                            padding: '6px 8px',
+                            borderRadius: 8,
+                            border: 'none',
+                            background: isCurrent ? 'rgba(23, 83, 59, 0.12)' : 'transparent',
+                            color: isCurrent ? 'var(--primary-green)' : 'var(--text-dark, #18181b)',
+                            fontSize: 12.5,
+                            fontWeight: isCurrent ? 700 : 500,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {org.name}
+                          </span>
+                          {isCurrent && (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="avatar-dropdown-divider" style={{ width: '100%' }} />
+
                 <div className="avatar-dropdown-identity">
                   <div className="avatar-dropdown-name">{displayName}</div>
                   {email && <div className="avatar-dropdown-email">{email}</div>}
@@ -248,7 +422,7 @@ export function TopBar({
                 role="menuitem"
                 onClick={() => {
                   setMenuOpen(false);
-                  onProfile();
+                  navigate('/profile');
                 }}
               >
                 <span className="avatar-dropdown-icon">

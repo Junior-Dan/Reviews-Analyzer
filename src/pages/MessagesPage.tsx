@@ -821,7 +821,7 @@ export function MessagesPage() {
                 </div>
 
                 <div className="explorer-actions-right">
-                  <button className="btn-action-solid" id="btnSyncReviews" disabled={syncing} onClick={syncLiveStoreReviews}>
+                  <button className="btn-action-solid" id="btnSyncReviews" disabled={syncing} onClick={syncLiveStoreReviews} style={{ borderRadius: '10px' }}>
                     {syncing ? (
                       'Syncing...'
                     ) : (
@@ -835,7 +835,7 @@ export function MessagesPage() {
                     )}
                   </button>
 
-                  <button className="btn-action-outline" onClick={exportDataCsv}>
+                  <button className="btn-action-outline" onClick={exportDataCsv} style={{ borderRadius: '10px' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                       <polyline points="7 10 12 15 17 10"></polyline>

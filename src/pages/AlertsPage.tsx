@@ -493,8 +493,8 @@ export function AlertsPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              minHeight: "360px",
-              padding: "48px 24px",
+              minHeight: "520px",
+              padding: "24px",
               textAlign: "center",
             }}
           >

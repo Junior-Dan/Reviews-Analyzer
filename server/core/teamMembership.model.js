@@ -11,7 +11,7 @@ const teamMembershipSchema = new mongoose.Schema(
     memberUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
     email: {
       type: String,
@@ -43,6 +43,15 @@ const teamMembershipSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-teamMembershipSchema.index({ owner: 1, memberUser: 1 }, { unique: true });
+teamMembershipSchema.index({ owner: 1, email: 1 }, { unique: true });
 
-module.exports = mongoose.model("TeamMembership", teamMembershipSchema);
+const TeamMembership = mongoose.model("TeamMembership", teamMembershipSchema);
+if (mongoose.connection.readyState === 1) {
+  TeamMembership.syncIndexes().catch(() => {});
+} else {
+  mongoose.connection.once("open", () => {
+    TeamMembership.syncIndexes().catch(() => {});
+  });
+}
+
+module.exports = TeamMembership;

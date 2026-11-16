@@ -18,14 +18,34 @@ const protect = async (req, res, next) => {
       if (!req.user) {
         return res.status(401).json({ message: "User not found with this token" });
       }
-      const membership = await TeamMembership.findOne({
-        memberUser: req.user._id,
-        status: "accepted",
-      })
-        .sort({ acceptedAt: -1 })
-        .select("owner role");
-      req.workspaceOwnerId = membership ? membership.owner : req.user._id;
-      req.workspaceRole = membership ? membership.role : "owner";
+      const now = new Date();
+      if (!req.user.lastActiveAt || now.getTime() - new Date(req.user.lastActiveAt).getTime() > 30000) {
+        req.user.lastActiveAt = now;
+        User.updateOne({ _id: req.user._id }, { $set: { lastActiveAt: now } }).catch(() => {});
+      }
+      const requestedWorkspaceId = String(req.headers["x-workspace-id"] || "").trim();
+      if (requestedWorkspaceId && requestedWorkspaceId === String(req.user._id)) {
+        req.workspaceOwnerId = req.user._id;
+        req.workspaceRole = "owner";
+      } else {
+        const membershipQuery = {
+          memberUser: req.user._id,
+          status: "accepted",
+        };
+        if (requestedWorkspaceId) {
+          membershipQuery.owner = requestedWorkspaceId;
+        }
+        const membership = await TeamMembership.findOne(membershipQuery)
+          .sort({ acceptedAt: -1 })
+          .select("owner role");
+        if (!membership && requestedWorkspaceId) {
+          req.workspaceOwnerId = req.user._id;
+          req.workspaceRole = "owner";
+        } else {
+          req.workspaceOwnerId = membership ? membership.owner : req.user._id;
+          req.workspaceRole = membership ? membership.role : "owner";
+        }
+      }
       return next();
     } catch (err) {
       console.error("Auth middleware error:", err.message);

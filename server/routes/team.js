@@ -3,6 +3,7 @@ const express = require("express");
 const nodemailer = require("nodemailer");
 const User = require("../core/user.model");
 const TeamMembership = require("../core/teamMembership.model");
+const { logAuditEvent } = require("../utils/auditLogger");
 const { protect } = require("../middleware/auth.middleware");
 
 const router = express.Router();
@@ -19,13 +20,15 @@ const AVATAR_PALETTE = [
   "#dc2626",
 ];
 
-function createTransporter() {
+function createTransporter(overridePort) {
   const host = (process.env.SMTP_HOST || "").trim();
-  const port = Number(process.env.SMTP_PORT || 587);
+  const port = overridePort || Number(process.env.SMTP_PORT || 587);
   const user = (process.env.SMTP_USER || "").trim();
   const pass = process.env.SMTP_PASS || "";
   const secure =
-    String(process.env.SMTP_SECURE || "").toLowerCase() === "true" || port === 465;
+    overridePort === 465 ||
+    String(process.env.SMTP_SECURE || "").toLowerCase() === "true" ||
+    port === 465;
 
   if (!host || !user || !pass) {
     return null;
@@ -35,8 +38,34 @@ function createTransporter() {
     host,
     port,
     secure,
+    family: 4,
+    connectionTimeout: 7000,
+    greetingTimeout: 7000,
     auth: { user, pass },
   });
+}
+
+async function sendMailWithFallback(mailOptions) {
+  const primary = createTransporter();
+  if (!primary) return { sent: false, reason: "SMTP_NOT_CONFIGURED" };
+
+  try {
+    await primary.sendMail(mailOptions);
+    return { sent: true };
+  } catch (err) {
+    const isNetworkErr = ["ESOCKET", "ETIMEDOUT", "EHOSTUNREACH", "ECONNREFUSED"].includes(err?.code);
+    const configuredPort = Number(process.env.SMTP_PORT || 587);
+    if (isNetworkErr && configuredPort !== 465) {
+      try {
+        const fallback = createTransporter(465);
+        await fallback.sendMail(mailOptions);
+        return { sent: true };
+      } catch (fallbackErr) {
+        return { sent: false, error: fallbackErr };
+      }
+    }
+    return { sent: false, error: err };
+  }
 }
 
 function formatRoleLabel(role) {
@@ -118,14 +147,7 @@ router.get("/accept", async (req, res) => {
     membership.inviteToken = null;
     await membership.save();
 
-    const ownerName = membership.owner?.name || membership.owner?.email || "the workspace";
-    return res.send(
-      renderAcceptPage({
-        title: "Invitation Accepted",
-        message: `You have joined ${ownerName}'s team as ${formatRoleLabel(membership.role)}. You can now sign in to Sentriqe.`,
-        success: true,
-      })
-    );
+    return res.redirect("/login");
   } catch (err) {
     console.error("Accept invite error:", err);
     return res.status(500).send(
@@ -152,12 +174,12 @@ router.get("/", async (req, res) => {
     const canManageTeam = workspaceRole === "owner" || workspaceRole === "admin";
 
     const [ownerUser, acceptedMemberships, pendingMemberships] = await Promise.all([
-      User.findById(ownerId).select("name email createdAt updatedAt"),
+      User.findById(ownerId).select("name email createdAt updatedAt lastActiveAt"),
       TeamMembership.find({
         owner: ownerId,
         status: "accepted",
       })
-        .populate("memberUser", "name email updatedAt")
+        .populate("memberUser", "name email updatedAt lastActiveAt")
         .sort({ acceptedAt: -1, createdAt: -1 }),
       canManageTeam
         ? TeamMembership.find({
@@ -169,8 +191,20 @@ router.get("/", async (req, res) => {
         : Promise.resolve([]),
     ]);
 
+    const formatLastActive = (value) => {
+      if (!value) return { label: "Never", isOnline: false };
+      const ts = new Date(value).getTime();
+      if (Number.isNaN(ts)) return { label: "Never", isOnline: false };
+      const diffMs = Math.max(0, Date.now() - ts);
+      if (diffMs < 5 * 60 * 1000) return { label: "Active", isOnline: true };
+      if (diffMs < 60 * 60 * 1000) return { label: `${Math.floor(diffMs / 60000)}m ago`, isOnline: false };
+      if (diffMs < 24 * 60 * 60 * 1000) return { label: `${Math.floor(diffMs / 3600000)}h ago`, isOnline: false };
+      return { label: formatShortDate(value), isOnline: false };
+    };
+
     const members = [];
     if (ownerUser) {
+      const activity = formatLastActive(ownerUser.lastActiveAt || ownerUser.updatedAt || ownerUser.createdAt);
       members.push({
         id: `owner-${ownerUser._id}`,
         name: ownerUser.name || ownerUser.email,
@@ -179,7 +213,8 @@ router.get("/", async (req, res) => {
         isOwner: true,
         isSelf: String(ownerUser._id) === String(req.user._id),
         dateAdded: formatShortDate(ownerUser.createdAt),
-        lastActive: formatShortDate(ownerUser.updatedAt || ownerUser.createdAt),
+        lastActive: activity.label,
+        isOnline: activity.isOnline,
         avatarBg: AVATAR_PALETTE[0],
       });
     }
@@ -187,6 +222,7 @@ router.get("/", async (req, res) => {
     acceptedMemberships
       .filter((m) => m.memberUser)
       .forEach((m, idx) => {
+        const activity = formatLastActive(m.memberUser.lastActiveAt || m.memberUser.updatedAt || m.acceptedAt);
         members.push({
           id: String(m._id),
           name: m.memberUser.name || m.email,
@@ -195,21 +231,20 @@ router.get("/", async (req, res) => {
           isOwner: false,
           isSelf: String(m.memberUser._id) === String(req.user._id),
           dateAdded: formatShortDate(m.acceptedAt || m.createdAt),
-          lastActive: formatShortDate(m.memberUser.updatedAt || m.acceptedAt),
+          lastActive: activity.label,
+          isOnline: activity.isOnline,
           avatarBg: AVATAR_PALETTE[(idx + 1) % AVATAR_PALETTE.length],
         });
       });
 
-    const pendingInvites = pendingMemberships
-      .filter((m) => m.memberUser)
-      .map((m, idx) => ({
-        id: String(m._id),
-        name: m.memberUser.name || m.email,
-        email: m.memberUser.email || m.email,
-        role: m.role,
-        invitedAt: formatShortDate(m.updatedAt || m.createdAt),
-        avatarBg: AVATAR_PALETTE[(idx + 2) % AVATAR_PALETTE.length],
-      }));
+    const pendingInvites = pendingMemberships.map((m, idx) => ({
+      id: String(m._id),
+      name: m.memberUser?.name || m.email.split("@")[0] || m.email,
+      email: m.memberUser?.email || m.email,
+      role: m.role,
+      invitedAt: formatShortDate(m.updatedAt || m.createdAt),
+      avatarBg: AVATAR_PALETTE[(idx + 2) % AVATAR_PALETTE.length],
+    }));
 
     return res.json({ members, pendingInvites, workspaceRole });
   } catch (err) {
@@ -244,20 +279,13 @@ router.post("/invite", async (req, res) => {
     }
 
     const targetUser = await User.findOne({ email }).select("_id name email");
-    if (!targetUser) {
-      return res.status(404).json({
-        message:
-          "No Sentriqe account exists for this email. They must create an account before you can invite them.",
-      });
-    }
-
-    if (String(targetUser._id) === String(ownerId)) {
+    if (targetUser && String(targetUser._id) === String(ownerId)) {
       return res.status(400).json({ message: "The workspace owner is already part of this team." });
     }
 
     const existing = await TeamMembership.findOne({
       owner: ownerId,
-      memberUser: targetUser._id,
+      email,
     });
     if (existing && existing.status === "accepted") {
       return res.status(409).json({
@@ -278,19 +306,21 @@ router.post("/invite", async (req, res) => {
       existing.role = role;
       existing.status = "pending";
       existing.inviteToken = inviteToken;
-      existing.email = targetUser.email;
+      existing.email = email;
+      if (targetUser) existing.memberUser = targetUser._id;
       await existing.save();
     } else {
       await TeamMembership.create({
         owner: ownerId,
-        memberUser: targetUser._id,
-        email: targetUser.email,
+        memberUser: targetUser ? targetUser._id : null,
+        email,
         role,
         status: "pending",
         inviteToken,
       });
     }
 
+    const recipientName = targetUser?.name || email.split("@")[0] || "there";
     const inviterName = req.user?.name || req.user?.email || "A team admin";
     const roleLabel = formatRoleLabel(role);
     const appUrl = (
@@ -300,12 +330,12 @@ router.post("/invite", async (req, res) => {
     const fromAddress =
       (process.env.SMTP_FROM || "").trim() || `Sentriqe <${process.env.SMTP_USER}>`;
 
-    await transporter.sendMail({
+    const mailResult = await sendMailWithFallback({
       from: fromAddress,
-      to: targetUser.email,
+      to: email,
       subject: `${inviterName} invited you to join Sentriqe as ${roleLabel}`,
       text: [
-        `Hi ${targetUser.name || ""},`,
+        `Hi ${recipientName},`,
         ``,
         `${inviterName} has invited you to join their workspace on Sentriqe with the ${roleLabel} role.`,
         ``,
@@ -319,7 +349,7 @@ router.post("/invite", async (req, res) => {
         <div style="font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; max-width: 520px; margin: 0 auto; padding: 24px;">
           <h2 style="margin: 0 0 12px; font-size: 20px;">You're invited to Sentriqe</h2>
           <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #334155;">
-            Hi ${targetUser.name || "there"},<br /><br />
+            Hi ${recipientName},<br /><br />
             <strong>${inviterName}</strong> has invited you to join their workspace on Sentriqe as <strong>${roleLabel}</strong>.
           </p>
           <a href="${acceptUrl}" style="display: inline-block; padding: 11px 22px; border-radius: 999px; background: #169c46; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600;">
@@ -332,9 +362,31 @@ router.post("/invite", async (req, res) => {
       `,
     });
 
+    void logAuditEvent({
+      owner: ownerId,
+      actor: req.user._id,
+      actorEmail: req.user.email,
+      severity: "LOW",
+      action: "TEAM INVITE_SENT",
+      entity: "Team",
+      description: `Invited ${email} as ${roleLabel}`,
+      metadata: { email, role, emailSent: mailResult.sent },
+    });
+
+    if (!mailResult.sent) {
+      console.warn("Team invite SMTP warning:", mailResult.error?.message || mailResult.reason);
+      return res.json({
+        ok: true,
+        emailSent: false,
+        acceptUrl,
+        message: `Invite saved for ${email} (SMTP blocked on network). Link: ${acceptUrl}`,
+      });
+    }
+
     return res.json({
       ok: true,
-      message: `Invitation sent to ${targetUser.email}. They will appear once they accept.`,
+      emailSent: true,
+      message: `Invitation sent to ${email}. They will appear once they accept.`,
     });
   } catch (err) {
     console.error("Team invite email error:", err);
@@ -360,9 +412,12 @@ router.post("/invites/:id/resend", async (req, res) => {
       status: "pending",
     }).populate("memberUser", "name email");
 
-    if (!pending || !pending.memberUser) {
+    if (!pending) {
       return res.status(404).json({ message: "Pending invitation not found." });
     }
+
+    const recipientEmail = pending.memberUser?.email || pending.email;
+    const recipientName = pending.memberUser?.name || recipientEmail.split("@")[0] || "there";
 
     const transporter = createTransporter();
     if (!transporter) {
@@ -385,12 +440,12 @@ router.post("/invites/:id/resend", async (req, res) => {
     const fromAddress =
       (process.env.SMTP_FROM || "").trim() || `Sentriqe <${process.env.SMTP_USER}>`;
 
-    await transporter.sendMail({
+    const mailResult = await sendMailWithFallback({
       from: fromAddress,
-      to: pending.memberUser.email,
+      to: recipientEmail,
       subject: `Reminder: ${inviterName} invited you to join Sentriqe as ${roleLabel}`,
       text: [
-        `Hi ${pending.memberUser.name || ""},`,
+        `Hi ${recipientName},`,
         ``,
         `${inviterName} has invited you to join their workspace on Sentriqe with the ${roleLabel} role.`,
         ``,
@@ -402,7 +457,7 @@ router.post("/invites/:id/resend", async (req, res) => {
         <div style="font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; max-width: 520px; margin: 0 auto; padding: 24px;">
           <h2 style="margin: 0 0 12px; font-size: 20px;">You're invited to Sentriqe</h2>
           <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #334155;">
-            Hi ${pending.memberUser.name || "there"},<br /><br />
+            Hi ${recipientName},<br /><br />
             <strong>${inviterName}</strong> has invited you to join their workspace on Sentriqe as <strong>${roleLabel}</strong>.
           </p>
           <a href="${acceptUrl}" style="display: inline-block; padding: 11px 22px; border-radius: 999px; background: #169c46; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600;">
@@ -415,9 +470,19 @@ router.post("/invites/:id/resend", async (req, res) => {
       `,
     });
 
+    if (!mailResult.sent) {
+      return res.json({
+        ok: true,
+        emailSent: false,
+        acceptUrl,
+        message: `Invite link for ${recipientEmail} (SMTP blocked on network): ${acceptUrl}`,
+      });
+    }
+
     return res.json({
       ok: true,
-      message: `Invitation resent to ${pending.memberUser.email}.`,
+      emailSent: true,
+      message: `Invitation resent to ${recipientEmail}.`,
     });
   } catch (err) {
     console.error("Resend invite error:", err);
@@ -450,6 +515,17 @@ router.patch("/:id", async (req, res) => {
       return res.status(404).json({ message: "Team member not found." });
     }
 
+    void logAuditEvent({
+      owner: ownerId,
+      actor: req.user._id,
+      actorEmail: req.user.email,
+      severity: "MEDIUM",
+      action: "TEAM ROLE_UPDATED",
+      entity: "Team",
+      description: `Updated ${updated.email} role to ${updated.role}`,
+      metadata: { email: updated.email, role: updated.role },
+    });
+
     return res.json({ ok: true, role: updated.role });
   } catch (err) {
     console.error("Update team member error:", err);
@@ -474,6 +550,17 @@ router.delete("/:id", async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ message: "Team member not found." });
     }
+
+    void logAuditEvent({
+      owner: ownerId,
+      actor: req.user._id,
+      actorEmail: req.user.email,
+      severity: "HIGH",
+      action: "TEAM MEMBER_REMOVED",
+      entity: "Team",
+      description: `Removed team member ${deleted.email}`,
+      metadata: { email: deleted.email },
+    });
 
     return res.json({ ok: true });
   } catch (err) {

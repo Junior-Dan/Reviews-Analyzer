@@ -44,6 +44,26 @@ export function clearAuthSession() {
   setCompanyLogo(null);
 }
 
+export function getActiveWorkspaceId(): string | null {
+  try {
+    return localStorage.getItem('activeWorkspaceId');
+  } catch {
+    return null;
+  }
+}
+
+export function setActiveWorkspaceId(id: string | null) {
+  try {
+    if (id) {
+      localStorage.setItem('activeWorkspaceId', id);
+    } else {
+      localStorage.removeItem('activeWorkspaceId');
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export async function authFetch(
   url: string,
   options: RequestInit = {}
@@ -53,6 +73,10 @@ export async function authFetch(
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
+  const activeWs = getActiveWorkspaceId();
+  if (activeWs && !headers.has('X-Workspace-Id')) {
+    headers.set('X-Workspace-Id', activeWs);
+  }
   if (
     options.body &&
     typeof options.body === 'string' &&
@@ -61,6 +85,10 @@ export async function authFetch(
     headers.set('Content-Type', 'application/json');
   }
   const res = await fetch(url, { ...options, headers });
+  const method = (options.method || 'GET').toUpperCase();
+  if (res.ok && method !== 'GET' && typeof window !== 'undefined' && !url.includes('/audit-logs/mark-seen')) {
+    window.dispatchEvent(new Event('auditLogsUpdated'));
+  }
   if (res.status === 401) {
     clearAuthSession();
     if (

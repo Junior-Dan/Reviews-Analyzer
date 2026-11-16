@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authFetch, getStoredUser, getToken } from '../utils/api';
 
 export type AppPageKey =
   | 'dashboard'
@@ -6,16 +8,19 @@ export type AppPageKey =
   | 'monitored-apps'
   | 'integrations'
   | 'alerts'
+  | 'devices'
+  | 'audit-logs'
+  | 'profile'
   | 'settings'
   | 'team';
 
 interface SidebarProps {
   activePage: AppPageKey;
-  onOpenDevices: () => void;
-  onOpenSyncScheduler: () => void;
-  onOpenProfile: () => void;
-  onOpenTeams: () => void;
-  onOpenHelpCentre: () => void;
+  onOpenDevices?: () => void;
+  onOpenSyncScheduler?: () => void;
+  onOpenProfile?: () => void;
+  onOpenTeams?: () => void;
+  onOpenHelpCentre?: () => void;
 }
 
 export function Sidebar({
@@ -27,6 +32,43 @@ export function Sidebar({
   onOpenHelpCentre,
 }: SidebarProps) {
   const navigate = useNavigate();
+  const storedUser = getStoredUser();
+  const wsRole = String(storedUser.workspaceRole || 'owner').toLowerCase();
+  const canViewAuditLogs = wsRole === 'owner' || wsRole === 'admin';
+  const [unreadAuditCount, setUnreadAuditCount] = useState(0);
+
+  useEffect(() => {
+    if (!canViewAuditLogs || !getToken()) return;
+    if (activePage === 'audit-logs') {
+      setUnreadAuditCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadUnread() {
+      try {
+        const res = await authFetch('/api/audit-logs/unread-count');
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled) setUnreadAuditCount(Number(data.count || 0));
+      } catch {
+        // ignore
+      }
+    }
+    loadUnread();
+    const intervalId = window.setInterval(loadUnread, 10000);
+
+    const handleSeen = () => setUnreadAuditCount(0);
+    const handleUpdated = () => void loadUnread();
+    window.addEventListener('auditLogsSeen', handleSeen);
+    window.addEventListener('auditLogsUpdated', handleUpdated);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('auditLogsSeen', handleSeen);
+      window.removeEventListener('auditLogsUpdated', handleUpdated);
+    };
+  }, [canViewAuditLogs, activePage]);
 
   return (
     <aside className="sidebar">
@@ -136,7 +178,10 @@ export function Sidebar({
               </svg>
               <span>Alerts</span>
             </div>
-            <div className="nav-subitem" onClick={onOpenDevices}>
+            <div
+              className={`nav-subitem${activePage === 'devices' ? ' active' : ''}`}
+              onClick={() => navigate('/devices')}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
                 <line x1="8" y1="21" x2="16" y2="21"></line>
@@ -151,6 +196,37 @@ export function Sidebar({
               </svg>
               <span>Sync Scheduler</span>
             </div>
+            {canViewAuditLogs && (
+              <div
+                className={`nav-subitem${activePage === 'audit-logs' ? ' active' : ''}`}
+                onClick={() => navigate('/audit-logs')}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <span>Audit logs</span>
+                {unreadAuditCount > 0 && activePage !== 'audit-logs' && (
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      padding: '3px 7px',
+                      borderRadius: 999,
+                      background: 'var(--brand-color, var(--primary-green))',
+                      color: '#ffffff',
+                    }}
+                  >
+                    {unreadAuditCount > 99 ? '99+' : unreadAuditCount}
+                  </span>
+                )}
+              </div>
+            )}
           </li>
 
           <li
@@ -176,7 +252,10 @@ export function Sidebar({
             </div>
           </li>
           <li className="nav-submenu" id="accountSubmenu">
-            <div className="nav-subitem" onClick={onOpenProfile}>
+            <div
+              className={`nav-subitem${activePage === 'profile' ? ' active' : ''}`}
+              onClick={() => navigate('/profile')}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>

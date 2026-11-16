@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
 
 const reviewsRoute = require("../routes/reviews");
 const packagesRoute = require("../routes/packages");
@@ -8,6 +10,8 @@ const appsRoute = require("../routes/apps");
 const dashboardRoute = require("../routes/dashboard");
 const integrationsRoute = require("../routes/integrations");
 const teamRoute = require("../routes/team");
+const devicesRoute = require("../routes/devices");
+const auditLogsRoute = require("../routes/auditLogs");
 
 const app = express();
 
@@ -23,6 +27,18 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Build version check for silent auto-update
+app.get("/api/app-version", (req, res) => {
+  try {
+    const html = fs.readFileSync(path.join(__dirname, "../../dist/index.html"), "utf8");
+    const match = html.match(/src="(\/assets\/[^"]+)"/);
+    res.set("Cache-Control", "no-store");
+    return res.json({ version: match ? match[1] : "dev" });
+  } catch {
+    return res.json({ version: "dev" });
+  }
+});
+
 // API Routes
 app.use("/api/auth", authRoute);
 app.use("/apps", appsRoute);
@@ -31,6 +47,8 @@ app.use("/packages", packagesRoute);
 app.use("/dashboard", dashboardRoute);
 app.use("/api/integrations", integrationsRoute);
 app.use("/api/team", teamRoute);
+app.use("/api/devices", devicesRoute);
+app.use("/api/audit-logs", auditLogsRoute);
 
 // API 404 Handler - ensure API routes return JSON instead of HTML
 app.use((req, res, next) => {

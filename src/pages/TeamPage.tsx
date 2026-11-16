@@ -25,6 +25,7 @@ interface TeamMember {
   avatarUrl?: string;
   dateAdded: string;
   lastActive: string;
+  isOnline?: boolean;
   avatarBg: string;
 }
 
@@ -163,8 +164,14 @@ export function TeamPage() {
   useEffect(() => {
     let active = true;
     fetchTeam(() => !active);
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchTeam(() => !active);
+      }
+    }, 15000);
     return () => {
       active = false;
+      window.clearInterval(intervalId);
     };
   }, []);
 
@@ -843,7 +850,11 @@ export function TeamPage() {
                               {member.dateAdded}
                             </td>
                             <td style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                              {member.lastActive}
+                              {member.isOnline || member.lastActive === 'Active' ? (
+                                <span className="team-last-active-online">{member.lastActive}</span>
+                              ) : (
+                                member.lastActive
+                              )}
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               {canManageTeam && !member.isOwner ? (

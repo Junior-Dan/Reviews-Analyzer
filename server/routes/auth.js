@@ -4,6 +4,10 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../core/user.model");
 const TeamMembership = require("../core/teamMembership.model");
+const App = require("../core/app.model");
+const StoreConnection = require("../core/storeConnection.model");
+const Device = require("../core/device.model");
+const { logAuditEvent } = require("../utils/auditLogger");
 const { protect, JWT_SECRET } = require("../middleware/auth.middleware");
 
 // Helper to generate JWT Token
@@ -11,22 +15,38 @@ const generateToken = (id) => {
   return jwt.sign({ id }, JWT_SECRET, { expiresIn: "30d" });
 };
 
+async function linkPendingMemberships(user) {
+  if (!user?._id || !user?.email) return;
+  await TeamMembership.updateMany(
+    { email: user.email.toLowerCase(), memberUser: null },
+    { $set: { memberUser: user._id } }
+  );
+}
+
 async function resolveWorkspaceContext(user) {
   const membership = await TeamMembership.findOne({
     memberUser: user._id,
     status: "accepted",
   })
     .sort({ acceptedAt: -1 })
-    .populate("owner", "companyLogo");
+    .populate("owner", "companyLogo companyName name email billingPlan billingEmail");
   if (membership) {
     return {
       companyLogo: membership.owner?.companyLogo || user.companyLogo || null,
+      companyName: membership.owner?.companyName || membership.owner?.name || "",
+      billingPlan: membership.owner?.billingPlan || "free",
+      billingEmail: membership.owner?.billingEmail || membership.owner?.email || "",
       workspaceRole: membership.role || "staff",
+      workspaceId: String(membership.owner?._id || user._id),
     };
   }
   return {
     companyLogo: user.companyLogo || null,
+    companyName: user.companyName || "",
+    billingPlan: user.billingPlan || "free",
+    billingEmail: user.billingEmail || user.email || "",
     workspaceRole: "owner",
+    workspaceId: String(user._id),
   };
 }
 
@@ -56,6 +76,17 @@ router.post("/register", async (req, res) => {
     });
 
     if (user) {
+      await linkPendingMemberships(user);
+      void logAuditEvent({
+        owner: user._id,
+        actor: user._id,
+        actorEmail: user.email,
+        severity: "LOW",
+        action: "AUTH REGISTER",
+        entity: "Auth",
+        description: `Account registered for ${user.email}`,
+        metadata: { ip: req.ip },
+      });
       res.status(201).json({
         _id: user._id,
         name: user.name,
@@ -90,7 +121,19 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (user && (await user.matchPassword(password))) {
-      const { companyLogo, workspaceRole } = await resolveWorkspaceContext(user);
+      await linkPendingMemberships(user);
+      await linkPendingMemberships(user);
+    const { companyLogo, companyName, workspaceRole, workspaceId } = await resolveWorkspaceContext(user);
+      void logAuditEvent({
+        owner: workspaceId || user._id,
+        actor: user._id,
+        actorEmail: user.email,
+        severity: "LOW",
+        action: "AUTH LOGIN_SUCCESS",
+        entity: "Auth",
+        description: `User logged in for ${user.email}`,
+        metadata: { ip: req.ip, userAgent: req.headers["user-agent"] || "" },
+      });
       res.json({
         _id: user._id,
         name: user.name,
@@ -99,6 +142,7 @@ router.post("/login", async (req, res) => {
         workspaceRole,
         avatar: user.avatar || null,
         companyLogo,
+        companyName,
         token: generateToken(user._id)
       });
     } else {
@@ -115,18 +159,171 @@ router.post("/login", async (req, res) => {
  * @desc    Get current user profile
  * @access  Private
  */
+router.get("/workspaces", protect, async (req, res) => {
+  try {
+    const memberships = await TeamMembership.find({
+      memberUser: req.user._id,
+      status: "accepted",
+    })
+      .populate("owner", "name companyName companyLogo")
+      .sort({ acceptedAt: -1 });
+
+    const list = [
+      {
+        id: String(req.user._id),
+        name: req.user.companyName || `${req.user.name || "My"}'s Workspace`,
+        companyLogo: req.user.companyLogo || null,
+        role: "owner",
+      },
+    ];
+
+    memberships.forEach((m) => {
+      if (m.owner && String(m.owner._id) !== String(req.user._id)) {
+        list.push({
+          id: String(m.owner._id),
+          name: m.owner.companyName || m.owner.name || "Workspace",
+          companyLogo: m.owner.companyLogo || null,
+          role: m.role || "staff",
+        });
+      }
+    });
+
+    return res.json({
+      workspaces: list,
+      activeWorkspaceId: String(req.workspaceOwnerId || req.user._id),
+    });
+  } catch (err) {
+    console.error("List workspaces error:", err);
+    return res.status(500).json({ message: "Failed to load organizations" });
+  }
+});
+
 router.get("/me", protect, async (req, res) => {
-  const { companyLogo, workspaceRole } = await resolveWorkspaceContext(req.user);
+  const { companyLogo, companyName, billingPlan, billingEmail, workspaceRole, workspaceId } = await resolveWorkspaceContext(req.user);
   res.json({
     _id: req.user._id,
     name: req.user.name,
     email: req.user.email,
     role: req.user.role,
     workspaceRole,
+    workspaceId,
     avatar: req.user.avatar || null,
     companyLogo,
+    companyName,
+    billingPlan,
+    billingEmail,
     createdAt: req.user.createdAt
   });
+});
+
+router.patch("/me", protect, async (req, res) => {
+  try {
+    const nextName = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    if (!nextName) {
+      return res.status(400).json({ message: "Name cannot be empty" });
+    }
+    req.user.name = nextName;
+    await req.user.save();
+    const { companyLogo, companyName, billingPlan, billingEmail, workspaceRole, workspaceId } = await resolveWorkspaceContext(req.user);
+    void logAuditEvent({
+      owner: workspaceId || req.user._id,
+      actor: req.user._id,
+      actorEmail: req.user.email,
+      severity: "LOW",
+      action: "PROFILE UPDATED",
+      entity: "Account",
+      description: `Profile name updated to "${req.user.name}"`,
+      metadata: { name: req.user.name },
+    });
+    res.json({
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+      workspaceRole,
+      workspaceId,
+      avatar: req.user.avatar || null,
+      companyLogo,
+      companyName,
+      billingPlan,
+      billingEmail,
+      createdAt: req.user.createdAt
+    });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+});
+
+router.patch("/account", protect, async (req, res) => {
+  try {
+    const role = req.workspaceRole || "owner";
+    if (role !== "owner" && role !== "admin") {
+      return res.status(403).json({ message: "Only admins can update the account profile" });
+    }
+    const ownerId = req.workspaceOwnerId || req.user._id;
+    const ownerUser = await User.findById(ownerId);
+    if (!ownerUser) {
+      return res.status(404).json({ message: "Workspace owner not found" });
+    }
+    if (typeof req.body?.companyName === "string") {
+      ownerUser.companyName = req.body.companyName.trim();
+    }
+    if (["free", "pro", "enterprise"].includes(req.body?.billingPlan)) {
+      ownerUser.billingPlan = req.body.billingPlan;
+    }
+    if (typeof req.body?.billingEmail === "string") {
+      ownerUser.billingEmail = req.body.billingEmail.trim().toLowerCase();
+    }
+    await ownerUser.save();
+    void logAuditEvent({
+      owner: ownerUser._id,
+      actor: req.user._id,
+      actorEmail: req.user.email,
+      severity: "MEDIUM",
+      action: "ACCOUNT UPDATED",
+      entity: "Account",
+      description: `Account settings updated by ${req.user.email}`,
+      metadata: {
+        companyName: ownerUser.companyName || "",
+        billingPlan: ownerUser.billingPlan || "free",
+        billingEmail: ownerUser.billingEmail || "",
+      },
+    });
+    res.json({
+      companyName: ownerUser.companyName || "",
+      companyLogo: ownerUser.companyLogo || null,
+      billingPlan: ownerUser.billingPlan || "free",
+      billingEmail: ownerUser.billingEmail || ownerUser.email || "",
+      workspaceId: String(ownerUser._id),
+    });
+  } catch (err) {
+    console.error("Update account profile error:", err);
+    res.status(500).json({ message: "Failed to update account profile" });
+  }
+});
+
+router.delete("/workspace", protect, async (req, res) => {
+  try {
+    if (req.workspaceRole !== "owner") {
+      return res.status(403).json({ message: "Only the workspace owner can delete the workspace" });
+    }
+    if (String(req.body?.confirmText || "").trim() !== "DELETE") {
+      return res.status(400).json({ message: "Type DELETE to confirm workspace deletion" });
+    }
+    const ownerId = req.user._id;
+    await Promise.all([
+      App.deleteMany({ user: ownerId }),
+      StoreConnection.deleteMany({ user: ownerId }),
+      TeamMembership.deleteMany({ owner: ownerId }),
+      Device.deleteMany({ owner: ownerId }),
+    ]);
+    await User.deleteOne({ _id: ownerId });
+    res.json({ message: "Workspace deleted successfully" });
+  } catch (err) {
+    console.error("Delete workspace error:", err);
+    res.status(500).json({ message: "Failed to delete workspace" });
+  }
 });
 
 /**
@@ -146,6 +343,17 @@ router.patch("/company-logo", protect, async (req, res) => {
 
     req.user.companyLogo = companyLogo ? companyLogo.trim() : null;
     await req.user.save();
+    void logAuditEvent({
+      owner: req.workspaceOwnerId || req.user._id,
+      actor: req.user._id,
+      actorEmail: req.user.email,
+      severity: "LOW",
+      action: req.user.companyLogo ? "COMPANY_LOGO UPDATED" : "COMPANY_LOGO REMOVED",
+      entity: "Account",
+      description: req.user.companyLogo
+        ? `Company logo updated by ${req.user.email}`
+        : `Company logo removed by ${req.user.email}`,
+    });
 
     res.json({
       message: req.user.companyLogo ? "Company logo saved" : "Company logo removed",
@@ -272,7 +480,18 @@ router.post("/google", async (req, res) => {
       }
     }
 
-    const { companyLogo, workspaceRole } = await resolveWorkspaceContext(user);
+    await linkPendingMemberships(user);
+    const { companyLogo, companyName, workspaceRole, workspaceId } = await resolveWorkspaceContext(user);
+    void logAuditEvent({
+      owner: workspaceId || user._id,
+      actor: user._id,
+      actorEmail: user.email,
+      severity: "LOW",
+      action: "AUTH GOOGLE_LOGIN",
+      entity: "Auth",
+      description: `User signed in via Google for ${user.email}`,
+      metadata: { ip: req.ip, userAgent: req.headers["user-agent"] || "" },
+    });
     res.json({
       _id: user._id,
       name: user.name,
@@ -281,6 +500,7 @@ router.post("/google", async (req, res) => {
       workspaceRole,
       avatar: user.avatar || null,
       companyLogo,
+      companyName,
       token: generateToken(user._id)
     });
   } catch (err) {
