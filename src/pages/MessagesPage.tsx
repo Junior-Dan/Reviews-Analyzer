@@ -1,10 +1,13 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { PlatformWordmark } from '../components/PlatformWordmark';
 import { Sidebar } from '../components/Sidebar';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { authFetchJson, queryClient, queryKeys, useWorkspaceKey } from '../lib/queryClient';
 import { authFetch } from '../utils/api';
 import '../styles/messages.css';
 
@@ -65,19 +68,11 @@ export function MessagesPage() {
   const initialSearch = searchParams.get('search') || '';
   const initialApp = searchParams.get('app') || '';
 
-  const [kpiTotal, setKpiTotal] = useState('781');
-  const [kpiAvg, setKpiAvg] = useState('4.2 ★');
-  const [kpiPos, setKpiPos] = useState('24.5%');
-  const [kpiTopTopic, setKpiTopTopic] = useState('UI & Design');
-  const [alerts, setAlerts] = useState<AlertNotice[]>([]);
-
-  const [packages, setPackages] = useState<PackageRecord[]>([]);
-  const [globalReviews, setGlobalReviews] = useState<ReviewRecord[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(true);
-  const [reviewsError, setReviewsError] = useState(false);
+  const wsId = useWorkspaceKey();
 
   const [globalSearch, setGlobalSearch] = useState(initialSearch);
   const [filterSearch, setFilterSearch] = useState(initialSearch);
+  const debouncedSearch = useDebouncedValue(filterSearch.trim(), 300);
   const [dateRange, setDateRange] = useState<'all' | '7d' | '30d' | '90d' | '365d'>('all');
   const [dateLabel, setDateLabel] = useState('Date range');
   const [sentimentFilter, setSentimentFilter] = useState('all');
@@ -88,12 +83,79 @@ export function MessagesPage() {
   const [appLabel, setAppLabel] = useState('Tracked apps');
   const [ratingFilter, setRatingFilter] = useState('all');
 
+  const summaryQuery = useQuery({
+    queryKey: queryKeys.dashboardSummary(wsId),
+    queryFn: ({ signal }) => authFetchJson<{ summary?: any }>('/dashboard/summary', { signal }),
+  });
+
+  const packagesQuery = useQuery({
+    queryKey: queryKeys.packages(wsId),
+    queryFn: ({ signal }) => authFetchJson<{ packages?: PackageRecord[] }>('/packages', { signal }),
+  });
+
+  const reviewsFilterKey = useMemo(
+    () => ({
+      platform: platformFilter,
+      appId: appFilter,
+      rating: ratingFilter,
+      sentiment: sentimentFilter,
+      search: debouncedSearch,
+      dateRange,
+    }),
+    [platformFilter, appFilter, ratingFilter, sentimentFilter, debouncedSearch, dateRange]
+  );
+
+  const reviewsQuery = useQuery({
+    queryKey: queryKeys.reviews(wsId, reviewsFilterKey),
+    placeholderData: keepPreviousData,
+    queryFn: async ({ signal }) => {
+      let url = '/dashboard?limit=100';
+      if (platformFilter !== 'all') url += `&platform=${encodeURIComponent(platformFilter)}`;
+      if (appFilter) url += `&appId=${encodeURIComponent(appFilter)}`;
+      if (ratingFilter !== 'all') url += `&rating=${encodeURIComponent(ratingFilter)}`;
+      if (sentimentFilter !== 'all') url += `&sentiment=${encodeURIComponent(sentimentFilter)}`;
+      if (debouncedSearch) url += `&search=${encodeURIComponent(debouncedSearch)}`;
+
+      const data = await authFetchJson<{ reviews?: ReviewRecord[] }>(url, { signal });
+      let reviewsList: ReviewRecord[] = data.reviews || [];
+
+      if (dateRange !== 'all') {
+        const daysMap = { '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
+        const days = daysMap[dateRange] || 365;
+        const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+        const dateFiltered = reviewsList.filter((r) => r.createdAt && new Date(r.createdAt).getTime() >= cutoff);
+        if (dateFiltered.length > 0) reviewsList = dateFiltered;
+      }
+
+      return reviewsList;
+    },
+  });
+
+  const summaryData = summaryQuery.data?.summary;
+  const kpiTotal = summaryData ? Number(summaryData.totalReviews || 0).toLocaleString() : '781';
+  const kpiAvg = summaryData ? `${summaryData.avgRating} ★` : '4.2 ★';
+  const kpiPos =
+    summaryData && summaryData.totalReviews > 0
+      ? `${((summaryData.sentimentDist.Positive / summaryData.totalReviews) * 100).toFixed(1)}%`
+      : summaryData
+      ? '0%'
+      : '24.5%';
+  const topCatEntry = summaryData?.categoryDist
+    ? Object.entries(summaryData.categoryDist as Record<string, number>).sort((a, b) => Number(b[1]) - Number(a[1]))[0]
+    : undefined;
+  const kpiTopTopic = topCatEntry ? topCatEntry[0] : 'UI & Design';
+  const alerts: AlertNotice[] = summaryData?.alerts || [];
+  const packages: PackageRecord[] = packagesQuery.data?.packages ?? [];
+  const globalReviews: ReviewRecord[] = reviewsQuery.data ?? [];
+  const reviewsLoading = reviewsQuery.isPending;
+  const isFetchingReviews = reviewsQuery.isFetching && reviewsQuery.isPlaceholderData;
+  const reviewsError = reviewsQuery.isError && !reviewsQuery.data;
+
   const [openChip, setOpenChip] = useState<ChipKey>(null);
   const [perPageDropdown, setPerPageDropdown] = useState<'top' | 'bottom' | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [visitedPages, setVisitedPages] = useState<Set<number>>(() => new Set([1]));
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
   const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(() => new Set());
   const [flaggedKeys, setFlaggedKeys] = useState<Set<string>>(() => new Set());
@@ -129,7 +191,6 @@ export function MessagesPage() {
   const [toastMsg, setToastMsg] = useState('');
   const [toastOpen, setToastOpen] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
-  const pageTimerRef = useRef<number | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -147,51 +208,25 @@ export function MessagesPage() {
     return () => {
       document.removeEventListener('click', closeAll);
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-      if (pageTimerRef.current) window.clearTimeout(pageTimerRef.current);
     };
   }, []);
 
-  const loadKPIData = useCallback(async () => {
-    try {
-      const res = await authFetch('/dashboard/summary');
-      if (res.ok) {
-        const data = await res.json();
-        const s = data.summary;
-        if (s) {
-          setKpiTotal(Number(s.totalReviews || 0).toLocaleString());
-          setKpiAvg(`${s.avgRating} ★`);
-          const pos = s.totalReviews > 0 ? ((s.sentimentDist.Positive / s.totalReviews) * 100).toFixed(1) : '0';
-          setKpiPos(`${pos}%`);
-          const cats = s.categoryDist || {};
-          const topCat = Object.entries(cats).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
-          if (topCat) setKpiTopTopic(topCat[0]);
-          setAlerts(s.alerts || []);
-        }
-      }
-    } catch (e) {
-      console.error('Error loading KPI data:', e);
+  useEffect(() => {
+    if (!appFilter && packages.length > 0) {
+      setAppLabel(`Tracked apps (${packages.length})`);
     }
-  }, []);
+  }, [appFilter, packages.length]);
+
+  const loadKPIData = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary(wsId) });
+  }, [wsId]);
 
   const loadTrackedApps = useCallback(async () => {
-    try {
-      const res = await authFetch('/packages');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.packages && data.packages.length > 0) {
-          setPackages(data.packages);
-          if (!appFilter) {
-            setAppLabel(`Tracked apps (${data.packages.length})`);
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Could not load packages:', err);
-    }
-  }, [appFilter]);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.packages(wsId) });
+  }, [wsId]);
 
   const loadFilteredReviews = useCallback(
-    async (overrides?: {
+    (_overrides?: {
       platform?: string;
       appId?: string;
       rating?: string;
@@ -199,57 +234,11 @@ export function MessagesPage() {
       search?: string;
       dateRange?: 'all' | '7d' | '30d' | '90d' | '365d';
     }) => {
-      const plat = overrides?.platform ?? platformFilter;
-      const appId = overrides?.appId ?? appFilter;
-      const rating = overrides?.rating ?? ratingFilter;
-      const sentiment = overrides?.sentiment ?? sentimentFilter;
-      const search = overrides?.search ?? filterSearch;
-      const dr = overrides?.dateRange ?? dateRange;
-
-      let url = '/dashboard?limit=100';
-      if (plat !== 'all') url += `&platform=${encodeURIComponent(plat)}`;
-      if (appId) url += `&appId=${encodeURIComponent(appId)}`;
-      if (rating !== 'all') url += `&rating=${encodeURIComponent(rating)}`;
-      if (sentiment !== 'all') url += `&sentiment=${encodeURIComponent(sentiment)}`;
-      if (search) url += `&search=${encodeURIComponent(search)}`;
-
-      setReviewsLoading(true);
-      setReviewsError(false);
-
-      try {
-        const [res] = await Promise.all([authFetch(url), new Promise((resolve) => setTimeout(resolve, 2000))]);
-        if (!res.ok) throw new Error('Reviews request failed');
-        const data = await res.json();
-        let reviewsList: ReviewRecord[] = data.reviews || [];
-
-        if (dr !== 'all') {
-          const daysMap = { '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
-          const days = daysMap[dr] || 365;
-          const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-          const dateFiltered = reviewsList.filter((r) => r.createdAt && new Date(r.createdAt).getTime() >= cutoff);
-          if (dateFiltered.length > 0) reviewsList = dateFiltered;
-        }
-
-        setGlobalReviews(reviewsList);
-        setCurrentPage(1);
-        setVisitedPages(new Set([1]));
-        setExpandedRowKey(null);
-      } catch (err) {
-        console.error('Error loading reviews:', err);
-        setReviewsError(true);
-      } finally {
-        setReviewsLoading(false);
-      }
+      setCurrentPage(1);
+      setExpandedRowKey(null);
     },
-    [platformFilter, appFilter, ratingFilter, sentimentFilter, filterSearch, dateRange]
+    []
   );
-
-  useEffect(() => {
-    loadKPIData();
-    loadTrackedApps();
-    loadFilteredReviews();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const displayedReviews = useMemo(() => {
     const term = globalSearch.trim().toLowerCase();
@@ -285,14 +274,6 @@ export function MessagesPage() {
     if (target === currentPage) return;
     setCurrentPage(target);
     setExpandedRowKey(null);
-    if (!visitedPages.has(target)) {
-      const next = new Set(visitedPages);
-      next.add(target);
-      setVisitedPages(next);
-      setReviewsLoading(true);
-      if (pageTimerRef.current) window.clearTimeout(pageTimerRef.current);
-      pageTimerRef.current = window.setTimeout(() => setReviewsLoading(false), 2000);
-    }
   };
 
   const generateReplyDraftFor = async (rev: ReviewRecord, tone: ToneKey) => {
@@ -353,13 +334,16 @@ export function MessagesPage() {
       });
       if (res.ok) {
         showToast('Reply approved and queued to official Store API!');
-        setGlobalReviews((prev) =>
-          prev.map((r) =>
+        queryClient.setQueryData<ReviewRecord[]>(queryKeys.reviews(wsId, reviewsFilterKey), (prev) =>
+          (prev ?? []).map((r) =>
             (r.reviewId || r._id) === (activeReplyReview.reviewId || activeReplyReview._id)
               ? { ...r, reply: { text: trimmed, status: 'Approved' } }
               : r
           )
         );
+        void queryClient.invalidateQueries({ queryKey: queryKeys.reviewsAll(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
         setActiveModal(null);
       } else {
         showToast('Reply saved to database successfully');
@@ -379,8 +363,9 @@ export function MessagesPage() {
       const res = await authFetch(`/reviews?platform=${plat}&appId=${encodeURIComponent(app)}`);
       if (res.ok) {
         showToast('Live review synchronization completed!');
-        await loadKPIData();
-        await loadFilteredReviews();
+        await queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary(wsId) });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.reviewsAll(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
       } else {
         showToast('Synced using existing database cache');
       }
@@ -440,8 +425,11 @@ export function MessagesPage() {
         setActiveModal(null);
         setNewAppName('');
         setNewAppId('');
-        loadTrackedApps();
-        loadFilteredReviews();
+        await loadTrackedApps();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.monitoredApps(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.reviewsAll(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
       } else {
         const errData = await res.json();
         alert(errData.message || 'Failed to add app');
@@ -528,22 +516,67 @@ export function MessagesPage() {
           <div className="messages-scroll-body">
             {/* KPI SUMMARY PILLS */}
             <div className="kpi-row">
-              <div className="kpi-card">
-                <div className="kpi-title">Total Reviews Analyzed</div>
-                <div className="kpi-value" id="kpiTotal">{kpiTotal}</div>
-              </div>
-              <div className="kpi-card">
-                <div className="kpi-title">Average Store Rating</div>
-                <div className="kpi-value" id="kpiAvg" style={{ color: '#f59e0b' }}>{kpiAvg}</div>
-              </div>
-              <div className="kpi-card">
-                <div className="kpi-title">Positive Sentiment</div>
-                <div className="kpi-value" id="kpiPos" style={{ color: '#16a34a' }}>{kpiPos}</div>
-              </div>
-              <div className="kpi-card">
-                <div className="kpi-title">Top Customer Topic</div>
-                <div className="kpi-value" id="kpiTopTopic" style={{ fontSize: 19 }}>{kpiTopTopic}</div>
-              </div>
+              {(() => {
+                const trends: Array<{ total: number; positive: number; negative: number }> =
+                  Array.isArray(summaryData?.monthlyTrends) ? summaryData.monthlyTrends : [];
+                const curr = trends.length >= 1 ? trends[trends.length - 1] : null;
+                const prev = trends.length >= 2 ? trends[trends.length - 2] : null;
+                const currPosRate = curr && curr.total > 0 ? (curr.positive / curr.total) * 100 : 0;
+                const prevPosRate = prev && prev.total > 0 ? (prev.positive / prev.total) * 100 : 0;
+                const posDelta = prev && curr ? Math.round(currPosRate - prevPosRate) : 0;
+                const ratingDelta = posDelta;
+                const fmtDelta = (val: number) => (val > 0 ? `+${val}%` : `${val}%`);
+                const renderTrendIcon = (up: boolean) => (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {up ? (
+                      <>
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                      </>
+                    ) : (
+                      <>
+                        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                        <polyline points="17 18 23 18 23 12"></polyline>
+                      </>
+                    )}
+                  </svg>
+                );
+
+                return (
+                  <>
+                    <div className="kpi-card">
+                      <div className="kpi-title">Total Reviews Analyzed</div>
+                      <div className="kpi-value" id="kpiTotal">{kpiTotal}</div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-title">Average Store Rating</div>
+                      <div className="kpi-value" id="kpiAvg">{kpiAvg}</div>
+                      <div className="kpi-trend-row">
+                        <span className={`kpi-trend-pill ${ratingDelta >= 0 ? 'up' : 'down'}`}>
+                          {renderTrendIcon(ratingDelta >= 0)}
+                          <span>{fmtDelta(ratingDelta)}</span>
+                        </span>
+                        <span className="kpi-trend-label">vs Last Month</span>
+                      </div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-title">Positive Sentiment</div>
+                      <div className="kpi-value" id="kpiPos">{kpiPos}</div>
+                      <div className="kpi-trend-row">
+                        <span className={`kpi-trend-pill ${posDelta >= 0 ? 'up' : 'down'}`}>
+                          {renderTrendIcon(posDelta >= 0)}
+                          <span>{fmtDelta(posDelta)}</span>
+                        </span>
+                        <span className="kpi-trend-label">vs Last Month</span>
+                      </div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-title">Top Customer Topic</div>
+                      <div className="kpi-value" id="kpiTopTopic" style={{ fontSize: 19 }}>{kpiTopTopic}</div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* CUSTOMER REVIEWS & AI FEEDBACK SECTION */}
@@ -824,12 +857,16 @@ export function MessagesPage() {
                 <div className="explorer-actions-right">
                   <button className="btn-action-solid" id="btnSyncReviews" disabled={syncing} onClick={syncLiveStoreReviews} style={{ borderRadius: '10px' }}>
                     {syncing ? (
-                      'Syncing...'
+                      <>
+                        <span className="btn-spinner" aria-hidden="true" />
+                        <span>Syncing...</span>
+                      </>
                     ) : (
                       <>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="23 4 23 10 17 10"></polyline>
-                          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="1 4 1 10 7 10"></polyline>
+                          <polyline points="23 20 23 14 17 14"></polyline>
+                          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
                         </svg>
                         <span>Sync</span>
                       </>
@@ -907,7 +944,14 @@ export function MessagesPage() {
               </div>
 
               {/* TABLE */}
-              <div className="table-wrapper">
+              {isFetchingReviews && <div className="table-progress-bar" aria-label="Updating reviews" />}
+              <div
+                className="table-wrapper"
+                style={{
+                  opacity: isFetchingReviews ? 0.65 : 1,
+                  transition: 'opacity 0.15s ease',
+                }}
+              >
                 <table className="reviews-table">
                   <thead>
                     <tr>
@@ -923,7 +967,7 @@ export function MessagesPage() {
                     </tr>
                   </thead>
                   <tbody id="reviewsTbody">
-                    {reviewsLoading && globalReviews.length === 0 ? (
+                    {reviewsLoading ? (
                       <SkeletonTableRows
                         rows={7}
                         columns={[
@@ -938,18 +982,15 @@ export function MessagesPage() {
                           { width: 68 },
                         ]}
                       />
-                    ) : reviewsLoading ? (
-                      <tr>
-                        <td colSpan={9} className="loader-td" style={{ background: '#ffffff' }}>
-                          <div className="loader-cell-wrap">
-                            <div className="circular-spinner"></div>
-                          </div>
-                        </td>
-                      </tr>
                     ) : reviewsError ? (
                       <tr>
-                        <td colSpan={9} style={{ textAlign: 'center', padding: 24, color: '#ef4444', background: '#ffffff' }}>
-                          Could not load reviews. Verify database connection.
+                        <td colSpan={9} style={{ padding: 20, background: '#ffffff' }}>
+                          <div className="query-error-banner" role="alert">
+                            <span>{(reviewsQuery.error as Error)?.message || 'Could not load reviews. Verify database connection.'}</span>
+                            <button type="button" className="query-retry-btn" onClick={() => void reviewsQuery.refetch()}>
+                              Retry
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ) : pageSlice.length === 0 ? (

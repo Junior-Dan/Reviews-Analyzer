@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Sidebar } from '../components/Sidebar';
 import { SkeletonBox } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { authFetch, clearAuthSession, getStoredUser, getToken, setAuthSession } from '../utils/api';
+import { authFetchJson, queryClient, queryKeys, useWorkspaceKey } from '../lib/queryClient';
+import { authFetch, clearAuthSession, getStoredUser, getToken, setAuthSession, type StoredUser } from '../utils/api';
 import { initTheme, setCompanyLogo } from '../utils/theme';
 import '../styles/monitored-apps.css';
 
@@ -53,8 +55,16 @@ export function ProfilePage() {
   const [editingCompany, setEditingCompany] = useState(false);
   const [draftCompany, setDraftCompany] = useState(String(stored.companyName || ''));
   const [saving, setSaving] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(!stored.email);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const wsId = useWorkspaceKey();
+
+  const profileQuery = useQuery({
+    queryKey: queryKeys.profile(wsId),
+    enabled: Boolean(getToken()),
+    queryFn: ({ signal }) => authFetchJson<StoredUser>('/api/auth/me', { signal }),
+  });
+
+  const profileLoading = !email && profileQuery.isPending;
 
   const isAdmin = workspaceRole === 'owner' || workspaceRole === 'admin';
   const hasAccountChanges =
@@ -65,43 +75,29 @@ export function ProfilePage() {
     initTheme();
     if (!getToken()) {
       navigate('/');
-      return;
     }
-
-    let cancelled = false;
-    async function loadProfile() {
-      try {
-        const res = await authFetch('/api/auth/me');
-        if (!res.ok || cancelled) return;
-        const data = await res.json();
-        if (cancelled) return;
-        setName(data.name || '');
-        setDraftName(data.name || '');
-        setEmail(data.email || '');
-        const rawWsRole = String(data.workspaceRole || 'owner').toLowerCase();
-        setWorkspaceRole(rawWsRole);
-        setRole(rawWsRole === 'owner' ? 'admin' : rawWsRole);
-        setAvatar(data.avatar || null);
-        setCompanyName(data.companyName || '');
-        setDraftCompany(data.companyName || '');
-        setCompanyLogoState(data.companyLogo || null);
-        setWorkspaceId(data.workspaceId || data._id || '');
-        const resolvedPlan = (['free', 'pro', 'enterprise'].includes(data.billingPlan) ? data.billingPlan : 'free') as BillingPlan;
-        setBillingPlan(resolvedPlan);
-        setBillingEmail(data.billingEmail || data.email || '');
-        setDraftBillingEmail(data.billingEmail || data.email || '');
-        setAuthSession({ ...stored, ...data });
-      } catch {
-        // Keep stored values on transient error
-      } finally {
-        if (!cancelled) setProfileLoading(false);
-      }
-    }
-    loadProfile();
-    return () => {
-      cancelled = true;
-    };
   }, [navigate]);
+
+  useEffect(() => {
+    const data = profileQuery.data as Record<string, any> | undefined;
+    if (!data) return;
+    setName(String(data.name || ''));
+    setDraftName(String(data.name || ''));
+    setEmail(String(data.email || ''));
+    const rawWsRole = String(data.workspaceRole || 'owner').toLowerCase();
+    setWorkspaceRole(rawWsRole);
+    setRole(rawWsRole === 'owner' ? 'admin' : rawWsRole);
+    setAvatar((data.avatar as string | null) || null);
+    setCompanyName(String(data.companyName || ''));
+    setDraftCompany(String(data.companyName || ''));
+    setCompanyLogoState((data.companyLogo as string | null) || null);
+    setWorkspaceId(String(data.workspaceId || data._id || ''));
+    const resolvedPlan = (['free', 'pro', 'enterprise'].includes(String(data.billingPlan)) ? data.billingPlan : 'free') as BillingPlan;
+    setBillingPlan(resolvedPlan);
+    setBillingEmail(String(data.billingEmail || data.email || ''));
+    setDraftBillingEmail(String(data.billingEmail || data.email || ''));
+    setAuthSession({ ...getStoredUser(), ...data });
+  }, [profileQuery.data]);
 
   async function handleSaveName() {
     const trimmed = draftName.trim();
@@ -122,6 +118,8 @@ export function ProfilePage() {
         setName(data.name || trimmed);
         setDraftName(data.name || trimmed);
         setAuthSession({ ...getStoredUser(), ...data });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.profile(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces() });
       }
     } finally {
       setSaving(false);
@@ -261,6 +259,8 @@ export function ProfilePage() {
         setBillingEmail(data.billingEmail || trimmed);
         setDraftBillingEmail(data.billingEmail || trimmed);
         setAuthSession({ ...getStoredUser(), billingEmail: data.billingEmail || trimmed });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.profile(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces() });
       }
     } finally {
       setSaving(false);

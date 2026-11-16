@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Sidebar } from '../components/Sidebar';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { authFetchJson, queryClient, queryKeys, useWorkspaceKey } from '../lib/queryClient';
 import { authFetch } from '../utils/api';
 import '../styles/monitored-apps.css';
 
@@ -92,15 +94,28 @@ export function TeamPage() {
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const wsId = useWorkspaceKey();
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [perPageDropdown, setPerPageDropdown] = useState<'top' | 'bottom' | null>(null);
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
-  const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole>('owner');
-  const [loadingMembers, setLoadingMembers] = useState(true);
   const [resendingId, setResendingId] = useState<string | null>(null);
+
+  const teamQuery = useQuery({
+    queryKey: queryKeys.team(wsId),
+    refetchInterval: 15_000,
+    queryFn: ({ signal }) =>
+      authFetchJson<{
+        members?: TeamMember[];
+        pendingInvites?: PendingInvite[];
+        workspaceRole?: WorkspaceRole;
+      }>('/api/team', { signal }),
+  });
+
+  const members = teamQuery.data?.members ?? [];
+  const pendingInvites = teamQuery.data?.pendingInvites ?? [];
+  const workspaceRole: WorkspaceRole = teamQuery.data?.workspaceRole ?? 'owner';
+  const loadingMembers = teamQuery.isPending;
   const canManageTeam = workspaceRole === 'owner' || workspaceRole === 'admin';
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -144,37 +159,6 @@ export function TeamPage() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [roleMenuOpen]);
-
-  const fetchTeam = async (isCancelled?: () => boolean) => {
-    try {
-      const resp = await authFetch('/api/team');
-      const data = await resp.json().catch(() => ({}));
-      if (isCancelled?.()) return;
-      if (resp.ok) {
-        if (Array.isArray(data.members)) setMembers(data.members);
-        if (Array.isArray(data.pendingInvites)) setPendingInvites(data.pendingInvites);
-        if (data.workspaceRole) setWorkspaceRole(data.workspaceRole);
-      }
-    } catch {
-      // ignore load errors
-    } finally {
-      if (!isCancelled?.()) setLoadingMembers(false);
-    }
-  };
-
-  useEffect(() => {
-    let active = true;
-    fetchTeam(() => !active);
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        void fetchTeam(() => !active);
-      }
-    }, 15000);
-    return () => {
-      active = false;
-      window.clearInterval(intervalId);
-    };
-  }, []);
 
   const counts = useMemo(
     () => ({
@@ -226,6 +210,12 @@ export function TeamPage() {
   const pageNumbers: number[] = [];
   for (let p = startPage; p <= endPage; p++) pageNumbers.push(p);
 
+  const handleGoToPage = (page: number) => {
+    const target = Math.min(totalPages, Math.max(1, page));
+    if (target === safePage) return;
+    setCurrentPage(target);
+  };
+
   const renderPaginationBar = (isBottom = false) => {
     const positionKey = isBottom ? 'bottom' : 'top';
     return (
@@ -247,7 +237,7 @@ export function TeamPage() {
           <button
             type="button"
             className="page-nav-btn"
-            onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+            onClick={() => handleGoToPage(Math.max(1, safePage - 1))}
             disabled={safePage <= 1}
             title="Previous Page"
           >
@@ -260,7 +250,7 @@ export function TeamPage() {
               key={p}
               type="button"
               className={`page-num-btn${p === safePage ? ' active' : ''}`}
-              onClick={() => setCurrentPage(p)}
+              onClick={() => handleGoToPage(p)}
             >
               {p}
             </button>
@@ -268,7 +258,7 @@ export function TeamPage() {
           <button
             type="button"
             className="page-nav-btn"
-            onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+            onClick={() => handleGoToPage(Math.min(totalPages, safePage + 1))}
             disabled={safePage >= totalPages}
             title="Next Page"
           >
@@ -356,9 +346,18 @@ export function TeamPage() {
           setInviteError(data.message || 'Failed to update team member.');
           return;
         }
-        setMembers((prev) =>
-          prev.map((m) => (m.id === editingMember.id ? { ...m, role: formRole } : m))
+        queryClient.setQueryData(queryKeys.team(wsId), (old: typeof teamQuery.data) =>
+          old
+            ? {
+                ...old,
+                members: (old.members ?? []).map((m) =>
+                  m.id === editingMember.id ? { ...m, role: formRole } : m
+                ),
+              }
+            : old
         );
+        void queryClient.invalidateQueries({ queryKey: queryKeys.team(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
         setToastMsg('Team member role updated.');
         setModalOpen(false);
       } catch {
@@ -385,7 +384,8 @@ export function TeamPage() {
         return;
       }
 
-      await fetchTeam();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.team(wsId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
       setToastMsg(
         data.message || `Invitation sent to ${trimmedEmail}. They will appear once they accept.`
       );
@@ -421,11 +421,23 @@ export function TeamPage() {
     if (!window.confirm(`Revoke the pending invitation for ${invite.email}?`)) return;
     try {
       const resp = await authFetch(`/api/team/${invite.id}`, { method: 'DELETE' });
-      if (!resp.ok) return;
-      setPendingInvites((prev) => prev.filter((p) => p.id !== invite.id));
+      if (!resp.ok) {
+        setToastMsg('Could not revoke invitation.');
+        return;
+      }
+      queryClient.setQueryData(queryKeys.team(wsId), (old: typeof teamQuery.data) =>
+        old
+          ? {
+              ...old,
+              pendingInvites: (old.pendingInvites ?? []).filter((p) => p.id !== invite.id),
+            }
+          : old
+      );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.team(wsId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
       setToastMsg(`Invitation for ${invite.email} revoked.`);
     } catch {
-      // ignore revoke errors
+      setToastMsg('Network error while revoking invitation.');
     }
   };
 
@@ -433,8 +445,20 @@ export function TeamPage() {
     if (!window.confirm(`Remove ${member.name} from the team?`)) return;
     try {
       const resp = await authFetch(`/api/team/${member.id}`, { method: 'DELETE' });
-      if (!resp.ok) return;
-      setMembers((prev) => prev.filter((m) => m.id !== member.id));
+      if (!resp.ok) {
+        setToastMsg('Could not remove team member.');
+        return;
+      }
+      queryClient.setQueryData(queryKeys.team(wsId), (old: typeof teamQuery.data) =>
+        old
+          ? {
+              ...old,
+              members: (old.members ?? []).filter((m) => m.id !== member.id),
+            }
+          : old
+      );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.team(wsId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
       setSelectedIds((prev) => {
         const next = new Set(prev);
         next.delete(member.id);
@@ -442,7 +466,7 @@ export function TeamPage() {
       });
       setToastMsg(`${member.name} removed from the team.`);
     } catch {
-      // ignore delete errors
+      setToastMsg('Network error while removing team member.');
     }
   };
 
@@ -588,7 +612,7 @@ export function TeamPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {loadingMembers && members.length === 0 ? (
+                    {loadingMembers ? (
                       <SkeletonTableRows
                         rows={6}
                         columns={[
@@ -600,11 +624,14 @@ export function TeamPage() {
                           { width: 64, align: 'right' },
                         ]}
                       />
-                    ) : loadingMembers ? (
+                    ) : teamQuery.isError && members.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="loader-td">
-                          <div className="loader-cell-wrap">
-                            <div className="circular-spinner"></div>
+                        <td colSpan={6} style={{ padding: 20 }}>
+                          <div className="query-error-banner" role="alert">
+                            <span>{(teamQuery.error as Error)?.message || 'Unable to load team members.'}</span>
+                            <button type="button" className="query-retry-btn" onClick={() => void teamQuery.refetch()}>
+                              Retry
+                            </button>
                           </div>
                         </td>
                       </tr>

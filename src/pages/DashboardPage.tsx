@@ -1,12 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Chart from 'chart.js/auto';
 import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
 import { SkeletonBox } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { authFetchJson, queryClient, queryKeys, useWorkspaceKey } from '../lib/queryClient';
 import { authFetch } from '../utils/api';
 import '../styles/dashboard.css';
+
+interface SummaryResponse {
+  summary?: {
+    totalReviews?: number;
+    kpis?: {
+      analyzedCount?: string;
+      positiveRatio?: string;
+      storeRatingsCount?: string;
+      responseRate?: string;
+      csat?: { percentage?: number; count?: number };
+      bugResolution?: { percentage?: number; count?: number };
+      featureEngagement?: { percentage?: number; count?: number };
+    };
+    categoryDist?: Record<string, number>;
+    platformBreakdown?: Array<{ avgRating?: string }>;
+    alerts?: AlertItem[];
+    sentimentDist?: { Positive?: number };
+    monthlyTrends?: { name: string; total: number; positive: number; negative: number }[];
+  };
+}
 
 type DashboardModal =
   | 'addApp'
@@ -78,22 +100,94 @@ export function DashboardPage() {
   const [periodLabel, setPeriodLabel] = useState('3 Months');
   const [activePreset, setActivePreset] = useState<string | null>('3 Months');
 
-  // KPI & Gauge state
-  const [kpiAnalyzedVal, setKpiAnalyzedVal] = useState('0');
-  const [kpiPosPercentVal, setKpiPosPercentVal] = useState('0%');
-  const [kpiStoreTotalVal, setKpiStoreTotalVal] = useState('0');
-  const [kpiReplyTimeVal, setKpiReplyTimeVal] = useState('0%');
+  const wsId = useWorkspaceKey();
+  const summaryQuery = useQuery({
+    queryKey: queryKeys.dashboardSummary(wsId),
+    queryFn: ({ signal }) => authFetchJson<SummaryResponse>('/dashboard/summary', { signal }),
+  });
 
-  const [gauge1, setGauge1] = useState({ pct: 0, count: '0' });
-  const [gauge2, setGauge2] = useState({ pct: 0, count: '0' });
-  const [gauge3, setGauge3] = useState({ pct: 0, count: '0' });
+  const derived = useMemo(() => {
+    const summary = summaryQuery.data?.summary;
+    if (!summary) {
+      return {
+        kpiAnalyzedVal: '0',
+        kpiPosPercentVal: '0%',
+        kpiStoreTotalVal: '0',
+        kpiReplyTimeVal: '0%',
+        gauge1: { pct: 0, count: '0' },
+        gauge2: { pct: 0, count: '0' },
+        gauge3: { pct: 0, count: '0' },
+        topCategories: ['0 rev', '0 rev', '0 rev'],
+        topChannels: ['0.0 ★', '0.0 ★', '0.0 ★'],
+        alerts: [] as AlertItem[],
+        trendStats: { positive: 0, bugs: 0, total: 0 },
+        monthlyTrends: [] as { name: string; total: number; positive: number; negative: number }[],
+      };
+    }
 
-  const [topCategories, setTopCategories] = useState(['0 rev', '0 rev', '0 rev']);
-  const [topChannels, setTopChannels] = useState(['0.0 ★', '0.0 ★', '0.0 ★']);
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [trendStats, setTrendStats] = useState({ positive: 0, bugs: 0, total: 0 });
+    const hasData = Number(summary.totalReviews || 0) > 0;
+    const parsedPos = parseInt(summary.kpis?.positiveRatio || '', 10);
+    const displayPosRatio = !hasData ? '0%' : !isNaN(parsedPos) ? `${parsedPos}%` : '0%';
+    const cats = summary.categoryDist || {};
+    const catEntries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+    const platforms = summary.platformBreakdown || [];
+
+    return {
+      kpiAnalyzedVal: hasData ? summary.kpis?.analyzedCount || '0' : '0',
+      kpiPosPercentVal: displayPosRatio,
+      kpiStoreTotalVal: hasData ? summary.kpis?.storeRatingsCount || '0' : '0',
+      kpiReplyTimeVal: hasData ? summary.kpis?.responseRate || '0%' : '0%',
+      gauge1: {
+        pct: hasData && summary.kpis?.csat?.percentage ? summary.kpis.csat.percentage : 0,
+        count: (summary.kpis?.csat?.count ?? 0).toLocaleString(),
+      },
+      gauge2: {
+        pct: summary.kpis?.bugResolution?.percentage ?? 0,
+        count: (summary.kpis?.bugResolution?.count ?? 0).toLocaleString(),
+      },
+      gauge3: {
+        pct: summary.kpis?.featureEngagement?.percentage ?? 0,
+        count: (summary.kpis?.featureEngagement?.count ?? 0).toLocaleString(),
+      },
+      topCategories: [
+        catEntries[0] ? `${catEntries[0][1]} rev` : '0 rev',
+        catEntries[1] ? `${catEntries[1][1]} rev` : '0 rev',
+        catEntries[2] ? `${catEntries[2][1]} rev` : '0 rev',
+      ],
+      topChannels:
+        platforms.length > 0
+          ? [
+              platforms[0] ? `${platforms[0].avgRating || '0.0'} ★` : '0.0 ★',
+              platforms[1] ? `${platforms[1].avgRating || '0.0'} ★` : '0.0 ★',
+              platforms[2] ? `${platforms[2].avgRating || '0.0'} ★` : '0.0 ★',
+            ]
+          : ['0.0 ★', '0.0 ★', '0.0 ★'],
+      alerts: summary.alerts || [],
+      trendStats: {
+        positive: Number(summary.sentimentDist?.Positive || 0),
+        bugs: Number(cats['Bugs & Crashes'] || 0),
+        total: Number(summary.totalReviews || 0),
+      },
+      monthlyTrends: Array.isArray(summary.monthlyTrends) ? summary.monthlyTrends : [],
+    };
+  }, [summaryQuery.data]);
+
+  const {
+    kpiAnalyzedVal,
+    kpiPosPercentVal,
+    kpiStoreTotalVal,
+    kpiReplyTimeVal,
+    gauge1,
+    gauge2,
+    gauge3,
+    topCategories,
+    topChannels,
+    alerts,
+    trendStats,
+  } = derived;
+  const summaryLoading = summaryQuery.isPending;
   const monthlyTrendsRef = useRef<{ name: string; total: number; positive: number; negative: number }[]>([]);
+  monthlyTrendsRef.current = derived.monthlyTrends;
 
   // Wave card state
   const [scopeTab, setScopeTab] = useState<'all' | 'focus'>('focus');
@@ -194,19 +288,32 @@ export function DashboardPage() {
           labels: ['No Data'],
           datasets: [
             {
+              label: 'Reviews',
               data: [0],
-              borderColor: '#17533b',
+              borderColor: isDarkTheme ? '#34d399' : '#17533b',
+              backgroundColor: isDarkTheme ? 'rgba(52, 211, 153, 0.12)' : 'rgba(23, 83, 59, 0.08)',
               borderWidth: 2,
               tension: 0.45,
               pointRadius: 0,
-              fill: false,
+              pointHoverRadius: 4,
+              fill: true,
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#17533b',
+              titleFont: { size: 10, weight: 'bold' },
+              bodyFont: { size: 11 },
+              padding: 7,
+              cornerRadius: 6,
+            },
+          },
           scales: {
             x: {
               grid: { display: false },
@@ -215,112 +322,100 @@ export function DashboardPage() {
             y: {
               display: false,
               grid: { display: false },
+              beginAtZero: true,
             },
           },
         },
       });
     }
 
-    const loadSummaryData = async () => {
-      try {
-        const res = await authFetch('/dashboard/summary');
-        if (!res.ok) return;
-        const data = await res.json();
-        const summary = data.summary;
-        if (!summary) return;
-
-        const hasData = Number(summary.totalReviews || 0) > 0;
-        const parsedPos = parseInt(summary.kpis?.positiveRatio, 10);
-        const displayPosRatio = !hasData
-          ? '0%'
-          : !isNaN(parsedPos)
-          ? `${parsedPos}%`
-          : '0%';
-        setKpiAnalyzedVal(hasData ? summary.kpis?.analyzedCount || '0' : '0');
-        setKpiPosPercentVal(displayPosRatio);
-        setKpiStoreTotalVal(hasData ? summary.kpis?.storeRatingsCount || '0' : '0');
-        setKpiReplyTimeVal(hasData ? summary.kpis?.responseRate || '0%' : '0%');
-
-        const csatPct = hasData && summary.kpis?.csat ? summary.kpis.csat.percentage : 0;
-        setGauge1({ pct: csatPct, count: (summary.kpis?.csat?.count ?? 0).toLocaleString() });
-        setGauge2({
-          pct: summary.kpis?.bugResolution?.percentage ?? 0,
-          count: (summary.kpis?.bugResolution?.count ?? 0).toLocaleString(),
-        });
-        setGauge3({
-          pct: summary.kpis?.featureEngagement?.percentage ?? 0,
-          count: (summary.kpis?.featureEngagement?.count ?? 0).toLocaleString(),
-        });
-
-        const cats = (summary.categoryDist || {}) as Record<string, number>;
-        const catEntries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
-        setTopCategories([
-          catEntries[0] ? `${catEntries[0][1]} rev` : '0 rev',
-          catEntries[1] ? `${catEntries[1][1]} rev` : '0 rev',
-          catEntries[2] ? `${catEntries[2][1]} rev` : '0 rev',
-        ]);
-
-        const platforms = summary.platformBreakdown || [];
-        if (platforms.length > 0) {
-          setTopChannels([
-            platforms[0] ? `${platforms[0].avgRating || '0.0'} ★` : '0.0 ★',
-            platforms[1] ? `${platforms[1].avgRating || '0.0'} ★` : '0.0 ★',
-            platforms[2] ? `${platforms[2].avgRating || '0.0'} ★` : '0.0 ★',
-          ]);
-        } else {
-          setTopChannels(['0.0 ★', '0.0 ★', '0.0 ★']);
-        }
-
-        setAlerts(summary.alerts || []);
-
-        setTrendStats({
-          positive: Number(summary.sentimentDist?.Positive || 0),
-          bugs: Number(summary.categoryDist?.['Bugs & Crashes'] || 0),
-          total: Number(summary.totalReviews || 0),
-        });
-
-        const trends: { name: string; total: number; positive: number; negative: number }[] =
-          Array.isArray(summary.monthlyTrends) ? summary.monthlyTrends : [];
-        monthlyTrendsRef.current = trends;
-
-        if (analyticsChartRef.current) {
-          if (trends.length > 0) {
-            const recent = trends.slice(-3);
-            analyticsChartRef.current.data.labels = recent.map((r) => r.name);
-            analyticsChartRef.current.data.datasets[0].data = recent.map((r) => Math.round(r.total * 0.6));
-            analyticsChartRef.current.data.datasets[1].data = recent.map((r) => r.total);
-          } else {
-            analyticsChartRef.current.data.labels = ['No Data'];
-            analyticsChartRef.current.data.datasets[0].data = [0];
-            analyticsChartRef.current.data.datasets[1].data = [0];
-          }
-          analyticsChartRef.current.update();
-        }
-
-        if (waveChartRef.current) {
-          if (trends.length > 0) {
-            waveChartRef.current.data.labels = trends.map((r) => r.name);
-            waveChartRef.current.data.datasets[0].data = trends.map((r) => r.total);
-          } else {
-            waveChartRef.current.data.labels = ['No Data'];
-            waveChartRef.current.data.datasets[0].data = [0];
-          }
-          waveChartRef.current.update();
-        }
-      } catch (err) {
-        console.error('Error loading summary:', err);
-      } finally {
-        setSummaryLoading(false);
+    const themeObserver = new MutationObserver(() => {
+      const dark = document.documentElement.dataset.theme === 'dark';
+      if (analyticsChartRef.current?.options.scales?.x?.ticks) {
+        analyticsChartRef.current.options.scales.x.ticks.color = dark ? '#ffffff' : '#64748b';
+        analyticsChartRef.current.update('none');
       }
-    };
-
-    loadSummaryData();
+      if (waveChartRef.current) {
+        if (waveChartRef.current.options.scales?.x?.ticks) {
+          waveChartRef.current.options.scales.x.ticks.color = dark ? '#ffffff' : '#94a3b8';
+        }
+        const ds = waveChartRef.current.data.datasets[0] as {
+          borderColor?: string;
+          backgroundColor?: string;
+        };
+        if (ds) {
+          ds.borderColor = dark ? '#34d399' : '#17533b';
+          ds.backgroundColor = dark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(23, 83, 59, 0.08)';
+        }
+        waveChartRef.current.update('none');
+      }
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     return () => {
+      themeObserver.disconnect();
       analyticsChartRef.current?.destroy();
       waveChartRef.current?.destroy();
     };
   }, []);
+
+  const syncWaveChart = (
+    trends: { name: string; total: number; positive: number; negative: number }[],
+    period: 'year' | 'month' | 'day'
+  ) => {
+    const chart = waveChartRef.current;
+    if (!chart) return;
+    let labels: string[] = ['No Data'];
+    let values: number[] = [0];
+
+    if (trends.length > 0) {
+      if (period === 'year') {
+        const byYear = new Map<string, number>();
+        trends.forEach((t) => {
+          const yr = t.name.split(' ').pop() || t.name;
+          byYear.set(yr, (byYear.get(yr) || 0) + t.total);
+        });
+        labels = Array.from(byYear.keys());
+        values = Array.from(byYear.values());
+      } else if (period === 'month') {
+        const recent = trends.slice(-6);
+        labels = recent.map((t) => t.name);
+        values = recent.map((t) => t.total);
+      } else {
+        const recent = trends.slice(-3);
+        labels = recent.map((t) => t.name);
+        values = recent.map((t) => t.total);
+      }
+    }
+
+    chart.data.labels = labels;
+    const ds = chart.data.datasets[0] as { data: number[]; pointRadius?: number };
+    ds.data = values;
+    // Show visible dot when there is only a single data point so the chart is never blank
+    ds.pointRadius = values.length <= 1 ? 3 : 0;
+    chart.update();
+  };
+
+  useEffect(() => {
+    const trends = derived.monthlyTrends;
+    if (analyticsChartRef.current) {
+      if (trends.length > 0) {
+        const recent = trends.slice(-3);
+        analyticsChartRef.current.data.labels = recent.map((r) => r.name);
+        analyticsChartRef.current.data.datasets[0].data = recent.map((r, i) =>
+          i > 0 ? recent[i - 1].total : Math.round(r.total * 0.6)
+        );
+        analyticsChartRef.current.data.datasets[1].data = recent.map((r) => r.total);
+      } else {
+        analyticsChartRef.current.data.labels = ['No Data'];
+        analyticsChartRef.current.data.datasets[0].data = [0];
+        analyticsChartRef.current.data.datasets[1].data = [0];
+      }
+      analyticsChartRef.current.update();
+    }
+
+    syncWaveChart(trends, wavePeriod);
+  }, [derived.monthlyTrends, wavePeriod]);
 
   const gaugeOffset = (pct: number) => {
     const circumference = 2 * Math.PI * 28;
@@ -329,33 +424,7 @@ export function DashboardPage() {
 
   const handleWavePeriod = (period: 'year' | 'month' | 'day') => {
     setWavePeriod(period);
-    const chart = waveChartRef.current;
-    if (!chart) return;
-    const trends = monthlyTrendsRef.current;
-    if (trends.length === 0) {
-      chart.data.labels = ['No Data'];
-      chart.data.datasets[0].data = [0];
-      chart.update();
-      return;
-    }
-    if (period === 'year') {
-      const byYear = new Map<string, number>();
-      trends.forEach((t) => {
-        const yr = t.name.split(' ').pop() || t.name;
-        byYear.set(yr, (byYear.get(yr) || 0) + t.total);
-      });
-      chart.data.labels = Array.from(byYear.keys());
-      chart.data.datasets[0].data = Array.from(byYear.values());
-    } else if (period === 'month') {
-      const recent = trends.slice(-6);
-      chart.data.labels = recent.map((t) => t.name);
-      chart.data.datasets[0].data = recent.map((t) => t.total);
-    } else {
-      const recent = trends.slice(-3);
-      chart.data.labels = recent.map((t) => t.name);
-      chart.data.datasets[0].data = recent.map((t) => t.total);
-    }
-    chart.update();
+    syncWaveChart(monthlyTrendsRef.current, period);
   };
 
   const changeCalMonth = (delta: number) => {
@@ -393,18 +462,19 @@ export function DashboardPage() {
 
     const chart = analyticsChartRef.current;
     if (chart) {
-      if (presetLabel === '3 Months') {
-        chart.data.labels = ['October', 'November', 'December'];
-        chart.data.datasets[0].data = [180, 240, 210];
-        chart.data.datasets[1].data = [290, 420, 320];
-      } else if (presetLabel === '6 Months') {
-        chart.data.labels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        chart.data.datasets[0].data = [140, 165, 190, 180, 240, 210];
-        chart.data.datasets[1].data = [210, 250, 275, 290, 420, 320];
-      } else if (presetLabel === '1 Year') {
-        chart.data.labels = ['Q1', 'Q2', 'Q3', 'Q4'];
-        chart.data.datasets[0].data = [520, 610, 590, 630];
-        chart.data.datasets[1].data = [680, 790, 840, 1030];
+      const trends = monthlyTrendsRef.current;
+      if (trends.length > 0) {
+        const sliceCount = presetLabel === '3 Months' ? 3 : presetLabel === '6 Months' ? 6 : 12;
+        const recent = trends.slice(-sliceCount);
+        chart.data.labels = recent.map((r) => r.name);
+        chart.data.datasets[0].data = recent.map((r, i) =>
+          i > 0 ? recent[i - 1].total : Math.round(r.total * 0.6)
+        );
+        chart.data.datasets[1].data = recent.map((r) => r.total);
+      } else {
+        chart.data.labels = ['No Data'];
+        chart.data.datasets[0].data = [0];
+        chart.data.datasets[1].data = [0];
       }
       chart.update();
     }
@@ -468,6 +538,10 @@ export function DashboardPage() {
       if (res.ok) {
         showToast(`Application '${name}' added to monitored catalog!`);
         setActiveModal(null);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.monitoredApps(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.packages(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
       } else {
         const errData = await res.json();
         alert(errData.message || 'Failed to add app');
@@ -520,6 +594,15 @@ export function DashboardPage() {
             onProfile={() => setActiveModal('account')}
             showAlertDot={alerts.length > 0}
           />
+
+          {summaryQuery.isError && !summaryQuery.data && (
+            <div className="query-error-banner" role="alert" style={{ marginBottom: 14 }}>
+              <span>{(summaryQuery.error as Error)?.message || 'Unable to load dashboard summary.'}</span>
+              <button type="button" className="query-retry-btn" onClick={() => void summaryQuery.refetch()}>
+                Retry
+              </button>
+            </div>
+          )}
 
           <div className="dashboard-grid">
             <div className="grid-column">

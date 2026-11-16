@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Sidebar } from '../components/Sidebar';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { ApiError, authFetchJson, queryKeys, useWorkspaceKey } from '../lib/queryClient';
 import { authFetch, getStoredUser, getToken } from '../utils/api';
 import { initTheme } from '../utils/theme';
 import '../styles/monitored-apps.css';
@@ -63,11 +66,9 @@ export function AuditLogsPage() {
   usePageMeta('monitored-apps', 'Audit Logs | Reviews Analyzer');
   const navigate = useNavigate();
 
-  const [events, setEvents] = useState<AuditEvent[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-
+  const wsId = useWorkspaceKey();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [userFilter, setUserFilter] = useState<string>('all');
@@ -86,9 +87,6 @@ export function AuditLogsPage() {
   const calendarWrapRef = useRef<HTMLDivElement | null>(null);
   const perPageTopWrapRef = useRef<HTMLDivElement | null>(null);
   const perPageBottomWrapRef = useRef<HTMLDivElement | null>(null);
-
-  const [entityOptions, setEntityOptions] = useState<string[]>([]);
-  const [userOptions, setUserOptions] = useState<string[]>([]);
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -126,53 +124,57 @@ export function AuditLogsPage() {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [calendarOpen, openFilter, perPageDropdown]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadLogs(silent = false) {
-      if (!silent) setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        params.set('page', String(page));
-        params.set('limit', String(limit));
-        if (severityFilter !== 'all') params.set('severity', severityFilter);
-        if (entityFilter !== 'all') params.set('entity', entityFilter);
-        if (userFilter !== 'all') params.set('user', userFilter);
-        if (searchTerm.trim()) params.set('search', searchTerm.trim());
-        if (dateFrom) params.set('dateFrom', dateFrom);
-        if (dateTo) params.set('dateTo', dateTo);
+  const auditQuery = useQuery({
+    queryKey: queryKeys.auditLogs(wsId, {
+      page,
+      limit,
+      severityFilter,
+      entityFilter,
+      userFilter,
+      search: debouncedSearch,
+      dateFrom,
+      dateTo,
+    }),
+    placeholderData: keepPreviousData,
+    refetchInterval: 12_000,
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(limit));
+      if (severityFilter !== 'all') params.set('severity', severityFilter);
+      if (entityFilter !== 'all') params.set('entity', entityFilter);
+      if (userFilter !== 'all') params.set('user', userFilter);
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo) params.set('dateTo', dateTo);
 
-        const res = await authFetch(`/api/audit-logs?${params.toString()}`);
-        if (res.status === 403) {
-          if (!cancelled) navigate('/dashboard');
-          return;
-        }
-        if (!res.ok || cancelled) return;
-        const data = await res.json();
-        if (cancelled) return;
-        setEvents(data.events || []);
-        setTotal(Number(data.total || 0));
-        setEntityOptions(data.facets?.entities || []);
-        setUserOptions(data.facets?.users || []);
+      try {
+        const data = await authFetchJson<{
+          events?: AuditEvent[];
+          total?: number;
+          facets?: { entities?: string[]; users?: string[] };
+        }>(`/api/audit-logs?${params.toString()}`, { signal });
+
         authFetch('/api/audit-logs/mark-seen', { method: 'POST' })
           .then(() => window.dispatchEvent(new Event('auditLogsSeen')))
           .catch(() => {});
-      } catch {
-        if (!cancelled && !silent) setEvents([]);
-      } finally {
-        if (!cancelled && !silent) setLoading(false);
+
+        return data;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 403) {
+          navigate('/dashboard');
+        }
+        throw err;
       }
-    }
-    loadLogs(false);
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        void loadLogs(true);
-      }
-    }, 12000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [page, limit, severityFilter, entityFilter, userFilter, searchTerm, dateFrom, dateTo]);
+    },
+  });
+
+  const events = auditQuery.data?.events ?? [];
+  const total = Number(auditQuery.data?.total ?? 0);
+  const entityOptions = auditQuery.data?.facets?.entities ?? [];
+  const userOptions = auditQuery.data?.facets?.users ?? [];
+  const loading = auditQuery.isPending;
+  const isFetchingTransition = auditQuery.isFetching && auditQuery.isPlaceholderData;
 
   const hasActiveFilters =
     severityFilter !== 'all' ||
@@ -1005,7 +1007,14 @@ export function AuditLogsPage() {
               {/* TOP PAGINATION BAR */}
               {renderPaginationBar('top')}
 
-              <div className="table-scroll-wrap">
+              {isFetchingTransition && <div className="table-progress-bar" aria-label="Loading page" />}
+              <div
+                className="table-scroll-wrap"
+                style={{
+                  opacity: isFetchingTransition ? 0.65 : 1,
+                  transition: 'opacity 0.15s ease',
+                }}
+              >
                 <table className="apps-table" style={{ tableLayout: 'auto' }}>
                   <thead>
                     <tr>
@@ -1019,7 +1028,7 @@ export function AuditLogsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {loading && events.length === 0 ? (
+                    {loading ? (
                       <SkeletonTableRows
                         rows={6}
                         columns={[
@@ -1032,11 +1041,14 @@ export function AuditLogsPage() {
                           { width: 32, align: 'right' },
                         ]}
                       />
-                    ) : loading ? (
+                    ) : auditQuery.isError && events.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="loader-td">
-                          <div className="loader-cell-wrap">
-                            <div className="circular-spinner" />
+                        <td colSpan={7} style={{ padding: 20 }}>
+                          <div className="query-error-banner" role="alert">
+                            <span>{(auditQuery.error as Error)?.message || 'Unable to load audit logs.'}</span>
+                            <button type="button" className="query-retry-btn" onClick={() => void auditQuery.refetch()}>
+                              Retry
+                            </button>
                           </div>
                         </td>
                       </tr>

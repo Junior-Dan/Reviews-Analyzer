@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
 import { SkeletonBox } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { authFetchJson, queryClient, queryKeys, useWorkspaceKey } from '../lib/queryClient';
 import { authFetch } from '../utils/api';
 import '../styles/integrations.css';
 
@@ -233,18 +235,44 @@ const INITIAL_INTEGRATIONS: IntegrationItem[] = [
   },
 ];
 
+const STORE_PLATFORM_MAP: Record<string, string> = {
+  'int-1': 'google',
+  'int-2': 'apple',
+  'int-3': 'samsung',
+  'int-4': 'amazon',
+};
+
 export function IntegrationsPage() {
   usePageMeta('integrations', 'Integrations - Reviews Analyzer');
   const navigate = useNavigate();
+  const wsId = useWorkspaceKey();
 
-  const [integrations, setIntegrations] = useState<IntegrationItem[]>(INITIAL_INTEGRATIONS);
+  const integrationsQuery = useQuery({
+    queryKey: queryKeys.integrations(wsId),
+    queryFn: async ({ signal }) => {
+      const data = await authFetchJson<{
+        integrations?: Array<{ platform?: string; status?: string }>;
+      }>('/api/integrations', { signal });
+      const byPlatform = new Map<string, { status?: string }>();
+      (data.integrations ?? []).forEach((entry) => {
+        if (entry.platform) byPlatform.set(entry.platform.toLowerCase(), entry);
+      });
+      return INITIAL_INTEGRATIONS.map((item) => {
+        const plat = STORE_PLATFORM_MAP[item.id];
+        if (!plat || !byPlatform.has(plat)) return item;
+        const saved = byPlatform.get(plat);
+        return { ...item, connected: saved?.status === 'Active' };
+      });
+    },
+  });
+
+  const integrations = integrationsQuery.data ?? INITIAL_INTEGRATIONS;
+  const loading = integrationsQuery.isPending;
   const [categoryFilter, setCategoryFilter] = useState<'all' | IntegrationCategory>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const [activeModal, setActiveModal] = useState<IntegrationsModal>(null);
   const [selectedInt, setSelectedInt] = useState<IntegrationItem | null>(null);
@@ -255,13 +283,6 @@ export function IntegrationsPage() {
   const [configIssuerId, setConfigIssuerId] = useState('');
   const [configPrivateKey, setConfigPrivateKey] = useState('');
   const [savingConfig, setSavingConfig] = useState(false);
-
-  const STORE_PLATFORM_MAP: Record<string, string> = {
-    'int-1': 'google',
-    'int-2': 'apple',
-    'int-3': 'samsung',
-    'int-4': 'amazon',
-  };
 
   // Add App & Teams & Devices
   const [newAppName, setNewAppName] = useState('');
@@ -285,17 +306,12 @@ export function IntegrationsPage() {
   };
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      setLoading(false);
-      setHasLoadedOnce(true);
-    }, 2000);
     const closeMenus = () => {
       setOpenCardMenuId(null);
       setStatusDropdownOpen(false);
     };
     document.addEventListener('click', closeMenus);
     return () => {
-      window.clearTimeout(t);
       document.removeEventListener('click', closeMenus);
     };
   }, []);
@@ -325,55 +341,40 @@ export function IntegrationsPage() {
     });
   }, [integrations, categoryFilter, statusFilter, searchQuery]);
 
-  useEffect(() => {
-    authFetch('/api/integrations')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!Array.isArray(data?.integrations)) return;
-        const byPlatform = new Map<string, { status?: string }>();
-        data.integrations.forEach((entry: { platform?: string; status?: string }) => {
-          if (entry.platform) byPlatform.set(entry.platform.toLowerCase(), entry);
-        });
-        setIntegrations((prev) =>
-          prev.map((item) => {
-            const plat = STORE_PLATFORM_MAP[item.id];
-            if (!plat || !byPlatform.has(plat)) return item;
-            const saved = byPlatform.get(plat);
-            return { ...item, connected: saved?.status === 'Active' };
-          })
-        );
-      })
-      .catch(() => {});
-  }, []);
-
   const handleCategoryChange = (cat: 'all' | IntegrationCategory) => {
     setCategoryFilter(cat);
-    setLoading(true);
-    window.setTimeout(() => setLoading(false), 2000);
   };
 
   const toggleIntegrationStatus = async (id: string) => {
     const target = integrations.find((item) => item.id === id);
     if (!target) return;
     const nextConnected = !target.connected;
-    setIntegrations((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, connected: nextConnected } : item))
+    const previous = queryClient.getQueryData<IntegrationItem[]>(queryKeys.integrations(wsId));
+    queryClient.setQueryData<IntegrationItem[]>(queryKeys.integrations(wsId), (prev) =>
+      (prev ?? integrations).map((item) => (item.id === id ? { ...item, connected: nextConnected } : item))
     );
 
     const plat = STORE_PLATFORM_MAP[id];
     if (plat) {
       try {
-        if (nextConnected) {
-          await authFetch(`/api/integrations/${plat}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ connectionName: target.name }),
-          });
-        } else {
-          await authFetch(`/api/integrations/${plat}`, { method: 'DELETE' });
+        const res = nextConnected
+          ? await authFetch(`/api/integrations/${plat}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ connectionName: target.name }),
+            })
+          : await authFetch(`/api/integrations/${plat}`, { method: 'DELETE' });
+        if (!res.ok) {
+          queryClient.setQueryData(queryKeys.integrations(wsId), previous);
+          showToast(`Failed to update ${target.name}`);
+          return;
         }
+        void queryClient.invalidateQueries({ queryKey: queryKeys.integrations(wsId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
       } catch {
-        // ignore network errors
+        queryClient.setQueryData(queryKeys.integrations(wsId), previous);
+        showToast(`Failed to update ${target.name}`);
+        return;
       }
     }
     showToast(`${target.name} ${nextConnected ? 'connected' : 'disconnected'}`);
@@ -429,9 +430,11 @@ export function IntegrationsPage() {
         return;
       }
 
-      setIntegrations((prev) =>
-        prev.map((item) => (item.id === selectedInt.id ? { ...item, connected: true } : item))
+      queryClient.setQueryData<IntegrationItem[]>(queryKeys.integrations(wsId), (prev) =>
+        (prev ?? integrations).map((item) => (item.id === selectedInt.id ? { ...item, connected: true } : item))
       );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.integrations(wsId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
       setActiveModal(null);
       showToast(data.message || `${selectedInt.name} connected`);
     } catch {
@@ -447,7 +450,9 @@ export function IntegrationsPage() {
   };
 
   const deleteIntegration = (item: IntegrationItem) => {
-    setIntegrations((prev) => prev.filter((i) => i.id !== item.id));
+    queryClient.setQueryData<IntegrationItem[]>(queryKeys.integrations(wsId), (prev) =>
+      (prev ?? integrations).filter((i) => i.id !== item.id)
+    );
     showToast(`Removed ${item.name}`);
   };
 
@@ -464,6 +469,10 @@ export function IntegrationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, platform: newAppPlatform, appId }),
       });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.monitoredApps(wsId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.packages(wsId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary(wsId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
     } catch {
       // ignore network error
     }
@@ -571,7 +580,7 @@ export function IntegrationsPage() {
               </div>
 
               <div id="integrationsGridContainer">
-                {loading && !hasLoadedOnce ? (
+                {loading ? (
                   <div className="integrations-grid" aria-busy="true">
                     {Array.from({ length: 4 }).map((_, idx) => (
                       <div key={`int-sk-${idx}`} className="int-card" aria-hidden="true">
@@ -591,9 +600,12 @@ export function IntegrationsPage() {
                       </div>
                     ))}
                   </div>
-                ) : loading ? (
-                  <div className="loader-cell-wrap">
-                    <div className="circular-spinner"></div>
+                ) : integrationsQuery.isError && !integrationsQuery.data ? (
+                  <div className="query-error-banner" role="alert">
+                    <span>{(integrationsQuery.error as Error)?.message || 'Unable to load integrations.'}</span>
+                    <button type="button" className="query-retry-btn" onClick={() => void integrationsQuery.refetch()}>
+                      Retry
+                    </button>
                   </div>
                 ) : filtered.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '48px 20px', color: '#64748b', fontSize: '13.5px' }}>

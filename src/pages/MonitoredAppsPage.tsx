@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { PlatformWordmark } from '../components/PlatformWordmark';
 import { Sidebar } from '../components/Sidebar';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { TopBar } from '../components/TopBar';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { queryClient, queryKeys, useWorkspaceKey } from '../lib/queryClient';
 import { authFetch } from '../utils/api';
 import '../styles/monitored-apps.css';
 
@@ -166,9 +168,87 @@ const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
 export function MonitoredAppsPage() {
   usePageMeta('monitored-apps', 'Reviews AI - Monitored Applications');
   const navigate = useNavigate();
+  const wsId = useWorkspaceKey();
 
-  const [allApps, setAllApps] = useState<MonitoredApp[]>([]);
-  const [loading, setLoading] = useState(true);
+  const appsQuery = useQuery({
+    queryKey: queryKeys.monitoredApps(wsId),
+    queryFn: async ({ signal }) => {
+      const mergedMap = new Map<string, MonitoredApp>();
+      DEFAULT_CURATED_APPS.forEach((item) => mergedMap.set(item.packageName, item));
+
+      const [pkgRes, appsRes, iconsRes] = await Promise.all([
+        authFetch('/packages', { signal }).catch(() => null),
+        authFetch('/apps?full=true', { signal }).catch(() => null),
+        fetch('/appIcons.json', { signal }).catch(() => null),
+      ]);
+
+      const iconLookup: Record<string, string> = iconsRes && iconsRes.ok ? await iconsRes.json() : {};
+
+      if (pkgRes && pkgRes.ok) {
+        const pkgData = await pkgRes.json();
+        (pkgData.packages || []).forEach((p: Record<string, string>, idx: number) => {
+          const pkgId = p.packageName || p.appId;
+          const plat = (p.platform || 'google').toLowerCase();
+          if (!['google', 'apple', 'samsung', 'amazon'].includes(plat)) return;
+          if (pkgId && !mergedMap.has(pkgId)) {
+            const seed = (idx + 1) * 7;
+            const pos = 66 + (seed % 20);
+            const neg = 6 + (seed % 10);
+            mergedMap.set(pkgId, {
+              id: p._id || `pkg-${idx}`,
+              name: p.appName || p.name || pkgId.split('.').pop() || pkgId,
+              packageName: pkgId,
+              platform: plat,
+              iconUrl: p.iconUrl || iconLookup[pkgId] || null,
+              rating: Number((4.3 + (seed % 6) * 0.1).toFixed(1)),
+              reviewsCount: 640 + seed * 85,
+              posPct: pos,
+              neuPct: Math.max(4, 100 - pos - neg),
+              negPct: neg,
+              version: `v2.${(idx % 8) + 1}.0`,
+              lastSynced: `${(idx % 12) + 2} mins ago`,
+              dateAdded: p.createdAt
+                ? new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+                : 'Nov 14, 2026',
+              status: 'Active',
+            });
+          }
+        });
+      }
+
+      if (appsRes && appsRes.ok) {
+        const appsData = await appsRes.json();
+        (appsData.apps || []).forEach((a: Record<string, string>, idx: number) => {
+          const pkgId = a.appId || a.packageName;
+          if (pkgId && !mergedMap.has(pkgId)) {
+            mergedMap.set(pkgId, {
+              id: a._id || `db-${idx}`,
+              name: a.name || pkgId,
+              packageName: pkgId,
+              platform: (a.platform || 'google').toLowerCase(),
+              iconUrl: a.iconUrl || iconLookup[pkgId] || null,
+              rating: 4.6,
+              reviewsCount: 420,
+              posPct: 76,
+              neuPct: 15,
+              negPct: 9,
+              version: 'v1.4.2',
+              lastSynced: 'Just now',
+              dateAdded: a.createdAt
+                ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+                : 'Nov 14, 2026',
+              status: 'Active',
+            });
+          }
+        });
+      }
+
+      return Array.from(mergedMap.values());
+    },
+  });
+
+  const allApps = appsQuery.data ?? [];
+  const loading = appsQuery.isPending;
   const [searchQuery, setSearchQuery] = useState('');
   const [storeFilter, setStoreFilter] = useState<StoreFilter>('all');
   const [sortBy, setSortBy] = useState<SortKey>('rating');
@@ -177,7 +257,6 @@ export function MonitoredAppsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [perPageDropdown, setPerPageDropdown] = useState<'top' | 'bottom' | null>(null);
-  const [visitedPages, setVisitedPages] = useState<Set<number>>(() => new Set([1]));
 
   const [selectedPackages, setSelectedPackages] = useState<Set<string>>(() => new Set());
   const [activeModal, setActiveModal] = useState<MonitoredModal>(null);
@@ -289,7 +368,6 @@ export function MonitoredAppsPage() {
   const [toastMsg, setToastMsg] = useState('');
   const [toastOpen, setToastOpen] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
-  const loaderTimerRef = useRef<number | null>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -307,99 +385,6 @@ export function MonitoredAppsPage() {
     return () => {
       document.removeEventListener('click', closeMenus);
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-      if (loaderTimerRef.current) window.clearTimeout(loaderTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      const mergedMap = new Map<string, MonitoredApp>();
-      DEFAULT_CURATED_APPS.forEach((item) => mergedMap.set(item.packageName, item));
-
-      try {
-        const [pkgRes, appsRes, iconsRes] = await Promise.all([
-          authFetch('/packages').catch(() => null),
-          authFetch('/apps?full=true').catch(() => null),
-          fetch('/appIcons.json').catch(() => null),
-          new Promise((resolve) => setTimeout(resolve, 2000)),
-        ]);
-
-        const iconLookup: Record<string, string> = iconsRes && iconsRes.ok ? await iconsRes.json() : {};
-
-        if (pkgRes && pkgRes.ok) {
-          const pkgData = await pkgRes.json();
-          (pkgData.packages || []).forEach((p: Record<string, string>, idx: number) => {
-            const pkgId = p.packageName || p.appId;
-            const plat = (p.platform || 'google').toLowerCase();
-            if (!['google', 'apple', 'samsung', 'amazon'].includes(plat)) return;
-            if (pkgId && !mergedMap.has(pkgId)) {
-              const seed = (idx + 1) * 7;
-              const pos = 66 + (seed % 20);
-              const neg = 6 + (seed % 10);
-              mergedMap.set(pkgId, {
-                id: p._id || `pkg-${idx}`,
-                name: p.appName || p.name || pkgId.split('.').pop() || pkgId,
-                packageName: pkgId,
-                platform: plat,
-                iconUrl: p.iconUrl || iconLookup[pkgId] || null,
-                rating: Number((4.3 + (seed % 6) * 0.1).toFixed(1)),
-                reviewsCount: 640 + seed * 85,
-                posPct: pos,
-                neuPct: Math.max(4, 100 - pos - neg),
-                negPct: neg,
-                version: `v2.${(idx % 8) + 1}.0`,
-                lastSynced: `${(idx % 12) + 2} mins ago`,
-                dateAdded: p.createdAt
-                  ? new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-                  : 'Nov 14, 2026',
-                status: 'Active',
-              });
-            }
-          });
-        }
-
-        if (appsRes && appsRes.ok) {
-          const appsData = await appsRes.json();
-          (appsData.apps || []).forEach((a: Record<string, string>, idx: number) => {
-            const pkgId = a.appId || a.packageName;
-            if (pkgId && !mergedMap.has(pkgId)) {
-              mergedMap.set(pkgId, {
-                id: a._id || `db-${idx}`,
-                name: a.name || pkgId,
-                packageName: pkgId,
-                platform: (a.platform || 'google').toLowerCase(),
-                iconUrl: a.iconUrl || iconLookup[pkgId] || null,
-                rating: 4.6,
-                reviewsCount: 420,
-                posPct: 76,
-                neuPct: 15,
-                negPct: 9,
-                version: 'v1.4.2',
-                lastSynced: 'Just now',
-                dateAdded: a.createdAt
-                  ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-                  : 'Nov 14, 2026',
-                status: 'Active',
-              });
-            }
-          });
-        }
-      } catch (e) {
-        console.warn('Using fallback monitored apps catalog', e);
-      }
-
-      if (!cancelled) {
-        setAllApps(Array.from(mergedMap.values()));
-        setCurrentPage(1);
-        setVisitedPages(new Set([1]));
-        setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
     };
   }, []);
 
@@ -455,29 +440,21 @@ export function MonitoredAppsPage() {
   const handleStoreFilter = (store: StoreFilter) => {
     setStoreFilter(store);
     setCurrentPage(1);
-    setVisitedPages(new Set([1]));
-    setLoading(true);
-    if (loaderTimerRef.current) window.clearTimeout(loaderTimerRef.current);
-    loaderTimerRef.current = window.setTimeout(() => setLoading(false), 2000);
   };
 
   const handleGoToPage = (page: number) => {
     const target = Math.min(totalPages, Math.max(1, page));
     if (target === currentPage) return;
     setCurrentPage(target);
-    if (!visitedPages.has(target)) {
-      const next = new Set(visitedPages);
-      next.add(target);
-      setVisitedPages(next);
-      setLoading(true);
-      if (loaderTimerRef.current) window.clearTimeout(loaderTimerRef.current);
-      loaderTimerRef.current = window.setTimeout(() => setLoading(false), 2000);
-    }
   };
 
   const handleDeleteApp = (pkg: string) => {
     const target = allApps.find((a) => a.packageName === pkg);
-    setAllApps((prev) => prev.filter((a) => a.packageName !== pkg));
+    queryClient.setQueryData<MonitoredApp[]>(queryKeys.monitoredApps(wsId), (prev) =>
+      (prev ?? []).filter((a) => a.packageName !== pkg)
+    );
+    void queryClient.invalidateQueries({ queryKey: queryKeys.packages(wsId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary(wsId) });
     setSelectedPackages((prev) => {
       const next = new Set(prev);
       next.delete(pkg);
@@ -504,7 +481,7 @@ export function MonitoredAppsPage() {
       // Fallback to local state append
     }
 
-    setAllApps((prev) => [
+    queryClient.setQueryData<MonitoredApp[]>(queryKeys.monitoredApps(wsId), (prev) => [
       {
         id: `custom-${Date.now()}`,
         name,
@@ -520,8 +497,12 @@ export function MonitoredAppsPage() {
         dateAdded: 'Nov 14, 2026',
         status: 'Active',
       },
-      ...prev,
+      ...(prev ?? []),
     ]);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.monitoredApps(wsId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.packages(wsId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary(wsId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.auditLogsAll(wsId) });
 
     setNewAppName('');
     setNewAppId('');
@@ -748,7 +729,7 @@ export function MonitoredAppsPage() {
                     </tr>
                   </thead>
                   <tbody id="appsTableBody">
-                    {loading && allApps.length === 0 ? (
+                    {loading ? (
                       <SkeletonTableRows
                         rows={6}
                         columns={[
@@ -761,11 +742,14 @@ export function MonitoredAppsPage() {
                           { width: 72, align: 'right' },
                         ]}
                       />
-                    ) : loading ? (
+                    ) : appsQuery.isError && allApps.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="loader-td" style={{ background: '#ffffff' }}>
-                          <div className="loader-cell-wrap">
-                            <div className="circular-spinner"></div>
+                        <td colSpan={7} style={{ padding: 20, background: '#ffffff' }}>
+                          <div className="query-error-banner" role="alert">
+                            <span>{(appsQuery.error as Error)?.message || 'Unable to load monitored applications.'}</span>
+                            <button type="button" className="query-retry-btn" onClick={() => void appsQuery.refetch()}>
+                              Retry
+                            </button>
                           </div>
                         </td>
                       </tr>

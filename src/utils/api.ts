@@ -1,3 +1,4 @@
+import { queryClient } from '../lib/queryClient';
 import { setCompanyLogo } from './theme';
 
 export interface StoredUser {
@@ -42,6 +43,7 @@ export function clearAuthSession() {
     // ignore storage errors
   }
   setCompanyLogo(null);
+  queryClient.clear();
 }
 
 export function getActiveWorkspaceId(): string | null {
@@ -62,6 +64,7 @@ export function setActiveWorkspaceId(id: string | null) {
   } catch {
     // ignore storage errors
   }
+  queryClient.clear();
 }
 
 export async function authFetch(
